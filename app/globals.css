@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-geist-sans: "Geist Sans", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+@layer utilities {
+  .glass-morphism {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  }
+
+  .gradient-border {
+    @apply bg-gradient-to-r from-blue-600 to-blue-400 p-[1px] rounded-lg;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-blue-500 to-blue-300 bg-clip-text text-transparent;
+  }
+
+  .text-hover-effect {
+    @apply relative overflow-hidden;
+  }
+
+  .text-hover-effect::before {
+    content: "";
+    @apply absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-400 transform -translate-x-full transition-transform duration-300;
+  }
+
+  .text-hover-effect:hover::before {
+    @apply translate-x-0;
+  }
+}
+
+/* Smooth scrolling with Lenis */
+html.lenis {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
