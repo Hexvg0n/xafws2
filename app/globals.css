@@ -19,7 +19,11 @@ html {
 body {
   font-feature-settings: "rlig" 1, "calt" 1;
 }
-
+@layer base{
+  :root{
+    --radius: 0.5rem
+  }
+}
 @layer utilities {
   .glass-morphism {
     @apply bg-white/5 backdrop-blur-md border border-white/10;
