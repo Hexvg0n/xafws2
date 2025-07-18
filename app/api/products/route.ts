@@ -14,13 +14,23 @@ function processApiData(data: any, platform: string) {
         platform,
         mainImages: data.Images || [],
         priceCNY: data.PriceCNY || 0,
+        formattedDimensions: data.FormattedDimensions || '',
         shopInfo: {
             shopName: data.ShopInfo?.ShopName,
             shopLogo: data.ShopInfo?.ShopLogo,
             shopId: data.ShopInfo?.ShopID,
         },
         dimensions: data.Dimensions || {},
-        skus: data.Skus || [], // Zapisujemy całą surową listę SKU
+        skus: Array.isArray(data.Skus)
+            ? data.Skus.map((sku: any) => {
+                const colorProp = sku.Properties?.find((p: any) => p.Name.toLowerCase().includes('color'));
+                const sizeProp = sku.Properties?.find((p: any) => p.Name.toLowerCase().includes('size'));
+                return {
+                    color: colorProp?.Value || null,
+                    size: sizeProp?.Value || null,
+                };
+            })
+            : [],
     };
 
     // Wyciąganie linków do obrazów z opisu (Description)
@@ -33,16 +43,14 @@ function processApiData(data: any, platform: string) {
     const colors = new Set<string>();
     const sizes = new Set<string>();
 
-    if (data.Skus) {
-        data.Skus.forEach((sku: any) => {
-            sku.Properties.forEach((prop: any) => {
-                if (prop.Name.toLowerCase().includes('color')) {
-                    colors.add(prop.Value);
-                }
-                if (prop.Name.toLowerCase().includes('size')) {
-                    sizes.add(prop.Value);
-                }
-            });
+    if (Array.isArray(processed.skus)) {
+        processed.skus.forEach((sku: any) => {
+            if (sku.color) {
+                colors.add(sku.color);
+            }
+            if (sku.size) {
+                sizes.add(sku.size);
+            }
         });
     }
 

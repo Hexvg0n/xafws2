@@ -13,6 +13,8 @@ const ProductSchema = new Schema({
     descriptionImages: [String], 
     
     priceCNY: { type: Number },
+
+    formattedDimensions: String,
     
     // Unikalne, wyciągnięte z wariantów (SKUs)
     availableColors: [String],
