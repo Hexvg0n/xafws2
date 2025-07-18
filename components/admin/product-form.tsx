@@ -1,78 +1,114 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { X, Upload, Package, Link as LinkIcon, Loader2, Wand2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { X, Upload, Package } from "lucide-react"
-import { Button } from "@/components/ui/button"
-
-interface Product {
-  id: string
-  name: string
-  brand: string
-  price: number
-  image: string
-  seller: string
-  batch: string
-  category: string
-  inStock: boolean
-  createdAt: string
+// Typ dla danych zeskrapowanych i finalnego produktu
+interface ScrapedData {
+  colors?: string[];
+  sizes?: string[];
+  weightInGrams?: number;
+  volumeCm3?: { length: number; width: number; height: number };
+  avgDeliveryDays?: number;
+  salesCount?: number;
 }
 
 interface ProductFormProps {
-  product?: Product | null
-  onSave: (product: Omit<Product, "id" | "createdAt">) => void
-  onCancel: () => void
+  // Nie potrzebujemy już edycji, bo dane są pobierane na nowo
+  onSave: () => void; // Funkcja do odświeżenia listy po zapisaniu
+  onCancel: () => void;
 }
 
-const categories = ["Jordan", "Nike", "Adidas", "Designer", "Off-White", "Yeezy", "Dunk", "Travis Scott"]
-const sellers = ["Mr. Hou", "Kevin", "Coco", "Monica", "Bean", "Vicky", "Tony", "Muks"]
-const batches = ["LJR Batch", "God Batch", "GD Batch", "OWF Batch", "GT Batch", "PK BASF", "H12 Batch"]
+export function ProductForm({ onSave, onCancel }: ProductFormProps) {
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [name, setName] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
+  
+  const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
+  const [isScraping, setIsScraping] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
-  const [formData, setFormData] = useState({
-    name: "",
-    brand: "",
-    price: 0,
-    image: "",
-    seller: "",
-    batch: "",
-    category: "",
-    inStock: true,
-  })
-
-  useEffect(() => {
-    if (product) {
-      setFormData({
-        name: product.name,
-        brand: product.brand,
-        price: product.price,
-        image: product.image,
-        seller: product.seller,
-        batch: product.batch,
-        category: product.category,
-        inStock: product.inStock,
-      })
+  // Funkcja do scrapowania danych
+  const handleScrape = async () => {
+    if (!sourceUrl) {
+      alert("Proszę wkleić link do produktu.");
+      return;
     }
-  }, [product])
+    setIsScraping(true);
+    setError(null);
+    setScrapedData(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave(formData)
-  }
+    try {
+      // W przyszłości ten endpoint będzie scrapował dane
+      // Na razie symulujemy jego działanie
+      console.log("Rozpoczynanie scrapowania dla:", sourceUrl);
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Symulacja opóźnienia sieciowego
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // W prawdziwej aplikacji tutaj byłby upload do serwera
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setFormData({ ...formData, image: e.target?.result as string })
-      }
-      reader.readAsDataURL(file)
+      const mockData: ScrapedData = {
+          colors: ["Black - Chicago", "Dark green-London", "Green-Rome", "Royal Blue-New York"],
+          sizes: ["S", "M", "L", "XL", "2XL"],
+          weightInGrams: 300,
+          volumeCm3: { length: 29, width: 27, height: 6 },
+          avgDeliveryDays: 3,
+          salesCount: 15,
+      };
+      
+      setScrapedData(mockData);
+
+    } catch (err) {
+      setError("Nie udało się pobrać danych ze strony. Sprawdź link i spróbuj ponownie.");
+      console.error(err);
+    } finally {
+      setIsScraping(false);
     }
-  }
+  };
+
+  // Funkcja do zapisu produktu
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || (!imageFile && !imageUrl) || !sourceUrl) {
+        alert("Nazwa, link do produktu i obrazek są wymagane.");
+        return;
+    }
+    setIsSaving(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('sourceUrl', sourceUrl);
+    if (imageFile) {
+        formData.append('imageFile', imageFile);
+    } else if (imageUrl) {
+        formData.append('imageUrl', imageUrl);
+    }
+
+    try {
+        const response = await fetch('/api/products', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Wystąpił nieznany błąd');
+        }
+
+        alert("Produkt został pomyślnie dodany!");
+        onSave(); // Wywołujemy funkcję odświeżającą listę w komponencie nadrzędnym
+        onCancel(); // Zamykamy formularz
+
+    } catch (err) {
+        setError((err as Error).message);
+    } finally {
+        setIsSaving(false);
+    }
+  };
 
   return (
     <motion.div
@@ -88,157 +124,82 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
         className="glass-morphism rounded-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white">{product ? "Edytuj Produkt" : "Dodaj Nowy Produkt"}</h2>
+          <h2 className="text-2xl font-bold text-white">Dodaj Nowy Produkt</h2>
           <Button onClick={onCancel} variant="ghost" size="sm" className="text-white/60 hover:text-white">
             <X className="w-5 h-5" />
           </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Image Upload */}
-          <div>
-            <label className="block text-sm font-medium text-white/80 mb-2">Zdjęcie produktu</label>
-            <div className="flex items-center space-x-4">
-              {formData.image && (
-                <img
-                  src={formData.image || "/placeholder.svg"}
-                  alt="Preview"
-                  className="w-20 h-20 rounded-lg object-cover"
-                />
-              )}
-              <div className="flex-1">
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="image-upload" />
-                <label
-                  htmlFor="image-upload"
-                  className="flex items-center justify-center w-full p-4 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-white/40 transition-colors"
-                >
-                  <Upload className="w-5 h-5 text-white/60 mr-2" />
-                  <span className="text-white/60">Wybierz zdjęcie</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Nazwa produktu *</label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="np. Air Jordan 1 Chicago"
+          {/* KROK 1: Wklejenie linku i scrapowanie */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-white/80">Link do produktu</label>
+            <div className="flex items-center space-x-2">
+              <Input
+                type="url"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                placeholder="https://... (np. z Kakobuy)"
+                className="flex-1"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Marka *</label>
-              <input
-                type="text"
-                required
-                value={formData.brand}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="np. Nike"
-              />
+              <Button type="button" onClick={handleScrape} disabled={isScraping}>
+                {isScraping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                <span className="ml-2">Pobierz dane</span>
+              </Button>
             </div>
           </div>
+          
+          {error && <p className="text-red-400 text-sm">{error}</p>}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Cena (zł) *</label>
-              <input
-                type="number"
-                required
-                min="0"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: Number.parseInt(e.target.value) })}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="580"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Kategoria *</label>
-              <select
-                required
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Wybierz kategorię</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Sprzedawca *</label>
-              <select
-                required
-                value={formData.seller}
-                onChange={(e) => setFormData({ ...formData, seller: e.target.value })}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Wybierz sprzedawcę</option>
-                {sellers.map((seller) => (
-                  <option key={seller} value={seller}>
-                    {seller}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Batch *</label>
-              <select
-                required
-                value={formData.batch}
-                onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Wybierz batch</option>
-                {batches.map((batch) => (
-                  <option key={batch} value={batch}>
-                    {batch}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Stock Status */}
-          <div>
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={formData.inStock}
-                onChange={(e) => setFormData({ ...formData, inStock: e.target.checked })}
-                className="w-4 h-4 text-blue-600 bg-white/5 border-white/10 rounded focus:ring-blue-500"
-              />
-              <span className="text-white/80">Produkt dostępny w magazynie</span>
-            </label>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center justify-end space-x-4 pt-6 border-t border-white/10">
-            <Button onClick={onCancel} variant="ghost" className="text-white/60 hover:text-white hover:bg-white/10">
-              Anuluj
-            </Button>
-            <Button
-              type="submit"
-              className="bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
+          {/* KROK 2: Uzupełnienie reszty danych i podgląd */}
+          {scrapedData && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6 pt-6 border-t border-white/10"
             >
-              <Package className="w-4 h-4 mr-2" />
-              {product ? "Zapisz Zmiany" : "Dodaj Produkt"}
-            </Button>
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Lewa kolumna: Nazwa i obrazek */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white/80 mb-2">Nazwa produktu *</label>
+                    <Input
+                      type="text" required value={name} onChange={(e) => setName(e.target.value)}
+                      placeholder="np. XaffReps T-shirt"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/80 mb-2">Obrazek produktu *</label>
+                    <Input type="file" accept="image/*" onChange={(e) => { setImageFile(e.target.files?.[0] || null); setImageUrl(""); }} className="mb-2" />
+                    <div className="text-center text-xs text-white/60 my-2">LUB</div>
+                    <Input type="url" value={imageUrl} onChange={(e) => { setImageUrl(e.target.value); setImageFile(null); }} placeholder="Wklej link do obrazka" />
+                  </div>
+                </div>
+
+                {/* Prawa kolumna: Zeskrapowane dane */}
+                <div className="glass-morphism rounded-xl p-4 space-y-3 text-sm">
+                    <h4 className="font-semibold text-white">Pobrane dane:</h4>
+                    <p className="text-white/80"><strong>Kolory:</strong> {scrapedData.colors?.join(', ') || 'Brak'}</p>
+                    <p className="text-white/80"><strong>Rozmiary:</strong> {scrapedData.sizes?.join(', ') || 'Brak'}</p>
+                    <p className="text-white/80"><strong>Waga:</strong> {scrapedData.weightInGrams}g</p>
+                    <p className="text-white/80"><strong>Objętość:</strong> {`${scrapedData.volumeCm3?.length}x${scrapedData.volumeCm3?.width}x${scrapedData.volumeCm3?.height} cm³`}</p>
+                    <p className="text-white/80"><strong>Sprzedaż:</strong> {scrapedData.salesCount} szt.</p>
+                    <p className="text-white/80"><strong>Dostawa:</strong> ~{scrapedData.avgDeliveryDays} dni</p>
+                </div>
+              </div>
+
+              {/* KROK 3: Zapis */}
+              <div className="flex items-center justify-end space-x-4 pt-6 border-t border-white/10">
+                <Button onClick={onCancel} type="button" variant="ghost">Anuluj</Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
+                  <span className="ml-2">Zapisz Produkt</span>
+                </Button>
+              </div>
+            </motion.div>
+          )}
         </form>
       </motion.div>
     </motion.div>
-  )
+  );
 }
