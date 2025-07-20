@@ -26,11 +26,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${GeistSans.variable} ${inter.variable} font-sans antialiased bg-gradient-to-br from-[#0d0d0d] to-[#1a1a1a] text-white/90`}
+        className={`${GeistSans.variable} ${inter.variable} font-sans antialiased bg-gradient-to-br from-[#0d0d0d] to-[#1a1a1a] text-white/90 min-h-screen `}
       >
         <Providers>
           <Navbar />
-          <main className="min-h-screen">{children}</main>
+          <main className="min-h-screen flex-grow">{children}</main>
         </Providers>
       </body>
     </html>

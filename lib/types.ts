@@ -1,0 +1,34 @@
+// lib/types.ts
+
+export type UserRole = 'root' | 'admin' | 'adder';
+
+export type User = { 
+  _id: string; 
+  nickname: string; 
+  role: UserRole; 
+  status: 'aktywny' | 'oczekujący' | 'zawieszony' | 'zablokowany'; 
+  createdAt: string; 
+};
+
+export type Product = {
+  _id: string;
+  name: string;
+  sourceUrl: string;
+  thumbnailUrl?: string;
+  platform: string;
+  mainImages: string[];
+  descriptionImages: string[];
+  priceCNY: number;
+  availableColors: string[];
+  availableSizes: string[];
+  shopInfo?: {
+    shopName?: string;
+    shopLogo?: string;
+    shopId?: string;
+  };
+  views?: number;
+  favorites?: number;
+};
+
+
+export type AdminTab = "stats" | "products" | "user-management" | "user-approval";

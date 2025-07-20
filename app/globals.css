@@ -71,3 +71,16 @@ html.lenis {
     scroll-behavior: auto !important;
   }
 }
+.gradient-text {
+  background-image: linear-gradient(to right, #b0fcf5, #2634f5); 
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass-morphism {
+  background: rgba(23, 23, 23, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}

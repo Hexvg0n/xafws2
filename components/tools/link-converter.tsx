@@ -1,368 +1,185 @@
 "use client"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
-import { Link2, Copy, ArrowRight, Check, ExternalLink, RefreshCw, AlertCircle } from "lucide-react"
+// ZMIANA 1: Usunięto 'AnimatePresence', nie będzie już potrzebne
+import { motion, Variants } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Loader2, Copy, Check, AlertTriangle, Link2 } from "lucide-react"
 
-interface AgentLink {
+// Definicje typów dla danych z API
+interface ConvertedLink {
+  key: string
   name: string
   url: string
-  fee: string
-  rating: number
-  features: string[]
-  color: string
 }
 
-interface ConvertedLinks {
+interface ConversionResults {
   originalUrl: string
-  productInfo?: {
-    title?: string
-    price?: string
-    seller?: string
-    image?: string
-    platform?: string
-  }
-  agentLinks: AgentLink[]
-  error?: string
+  convertedLinks: ConvertedLink[]
 }
-
-const agents: AgentLink[] = [
-  {
-    name: "Pandabuy",
-    url: "https://pandabuy.com/product?url=",
-    fee: "5%",
-    rating: 4.8,
-    features: ["Darmowe QC", "Szybka wysyłka", "24/7 Support"],
-    color: "bg-purple-500",
-  },
-  {
-    name: "Wegobuy",
-    url: "https://wegobuy.com/en/page/buy?url=",
-    fee: "6%",
-    rating: 4.6,
-    features: ["Profesjonalne QC", "Ubezpieczenie", "Consolidation"],
-    color: "bg-blue-500",
-  },
-  {
-    name: "Sugargoo",
-    url: "https://sugargoo.com/index/item/index.html?tp=taobao&url=",
-    fee: "4%",
-    rating: 4.7,
-    features: ["Niskie opłaty", "Szybkie QC", "Expert Service"],
-    color: "bg-green-500",
-  },
-  {
-    name: "CSSBuy",
-    url: "https://cssbuy.com/item-",
-    fee: "5%",
-    rating: 4.5,
-    features: ["Stare doświadczenie", "Dobre ceny", "Reliable"],
-    color: "bg-orange-500",
-  },
-  {
-    name: "Superbuy",
-    url: "https://superbuy.com/en/page/buy?url=",
-    fee: "7%",
-    rating: 4.4,
-    features: ["Premium service", "Expert QC", "Insurance"],
-    color: "bg-red-500",
-  },
-  {
-    name: "Basetao",
-    url: "https://basetao.com/shopping?url=",
-    fee: "5%",
-    rating: 4.3,
-    features: ["Competitive rates", "Good support", "Fast processing"],
-    color: "bg-indigo-500",
-  },
-]
 
 export function LinkConverter() {
-  const [productLink, setProductLink] = useState("")
-  const [isConverting, setIsConverting] = useState(false)
-  const [result, setResult] = useState<ConvertedLinks | null>(null)
+  const [inputUrl, setInputUrl] = useState("")
+  const [results, setResults] = useState<ConversionResults | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const [copiedLink, setCopiedLink] = useState<string | null>(null)
 
-  const convertLink = async () => {
-    if (!productLink.trim()) return
-
-    setIsConverting(true)
+  const handleConvert = async () => {
+    if (!inputUrl.trim()) {
+      setError("Proszę wkleić link do konwersji.")
+      return
+    }
+    setIsLoading(true)
     setError(null)
-
+    setResults(null)
     try {
       const response = await fetch("/api/converter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: productLink }),
+        body: JSON.stringify({ url: inputUrl }),
       })
-
+      const data = await response.json()
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `Błąd serwera: ${response.status}`)
+        throw new Error(data.error || "Wystąpił nieznany błąd serwera.")
       }
-
-      const data: ConvertedLinks = await response.json()
-
-      if (data.error) {
-        throw new Error(data.error)
-      }
-
-      // Dodaj pełne URL-e do agentów
-      const resultWithAgentLinks: ConvertedLinks = {
-        ...data,
-        agentLinks: agents.map((agent) => ({
-          ...agent,
-          url: agent.url + encodeURIComponent(productLink),
-        })),
-      }
-
-      setResult(resultWithAgentLinks)
+      setResults(data)
     } catch (err) {
-      setError((err as Error).message || "Wystąpił nieoczekiwany błąd")
+      setError((err as Error).message)
     } finally {
-      setIsConverting(false)
+      setIsLoading(false)
     }
   }
 
-  const copyToClipboard = async (text: string, index: number) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopiedIndex(index)
-      setTimeout(() => setCopiedIndex(null), 2000)
-    } catch (err) {
-      console.error("Failed to copy:", err)
-    }
+  const handleCopy = (url: string) => {
+    navigator.clipboard.writeText(url)
+    setCopiedLink(url)
+    setTimeout(() => setCopiedLink(null), 2000)
+  }
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  }
+
+  const itemVariants: Variants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } },
   }
 
   return (
-    <div className="space-y-8">
-      {/* Input Section */}
-      <div className="glass-morphism rounded-2xl p-8">
-        <h2 className="text-xl font-semibold text-white mb-6">Wklej link do produktu</h2>
+    <motion.div initial="hidden" animate="visible" variants={containerVariants} className="w-full max-w-3xl space-y-8">
+      <motion.div variants={itemVariants} className="text-center">
+        <h1 className="text-4xl md:text-5xl font-bold gradient-text">Konwerter Linków</h1>
+        <p className="mt-4 text-neutral-400 max-w-xl mx-auto">
+          Wklej link z Taobao, Weidian, 1688 lub od agenta, a my wygenerujemy dla Ciebie linki do wszystkich popularnych
+          platform.
+        </p>
+      </motion.div>
 
-        <div className="space-y-4">
-          <div className="relative">
-            <Link2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
-            <input
-              type="url"
-              value={productLink}
-              onChange={(e) => setProductLink(e.target.value)}
-              placeholder="https://item.taobao.com/item.htm?id=... lub https://weidian.com/..."
-              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      <motion.div variants={itemVariants} className="glass-morphism p-6 rounded-xl">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Input
+            type="url"
+            placeholder="https://item.taobao.com/item.htm?id=..."
+            value={inputUrl}
+            onChange={(e) => setInputUrl(e.target.value)}
+            className="flex-grow text-base bg-neutral-900/50 border-neutral-700 focus:ring-blue-500 focus:ring-offset-neutral-900 text-white placeholder:text-neutral-500 h-12"
+            disabled={isLoading}
+          />
+          <div className="w-full sm:w-auto p-[1px] rounded-lg bg-gradient-to-r from-blue-600 to-blue-400">
+            <Button
+              onClick={handleConvert}
+              disabled={isLoading}
+              size="lg"
+              className="w-full bg-neutral-900 hover:bg-neutral-800 text-white h-12 text-base font-semibold"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  <span>Konwertuję...</span>
+                </>
+              ) : (
+                "Konwertuj Link"
+              )}
+            </Button>
           </div>
-
-          <div className="text-sm text-white/60">
-            <p className="mb-2">Obsługiwane platformy:</p>
-            <div className="flex flex-wrap gap-2">
-              {["Taobao", "Weidian", "1688", "Tmall", "Yupoo"].map((platform) => (
-                <span key={platform} className="px-2 py-1 bg-white/10 rounded text-xs">
-                  {platform}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <Button
-            onClick={convertLink}
-            disabled={!productLink.trim() || isConverting}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
-          >
-            {isConverting ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Konwertuję na agentów...
-              </>
-            ) : (
-              <>
-                <ArrowRight className="w-4 h-4 mr-2" />
-                Konwertuj na Agentów
-              </>
-            )}
-          </Button>
         </div>
-      </div>
+        {error && (
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 text-center text-sm text-red-400 flex items-center justify-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            {error}
+          </motion.p>
+        )}
+      </motion.div>
 
-      {/* Error Display */}
-      {error && (
+      {/* ZMIANA 2: Usunęliśmy AnimatePresence i uprościliśmy logikę animacji */}
+      {results && (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-morphism rounded-2xl p-6 border border-red-400/30"
+          // Używamy tego samego wariantu, co inne elementy na stronie
+          variants={itemVariants}
+          className="space-y-6"
         >
-          <div className="flex items-center space-x-3">
-            <AlertCircle className="w-6 h-6 text-red-400" />
-            <div>
-              <h3 className="text-lg font-semibold text-red-400">Błąd konwersji</h3>
-              <p className="text-white/70">{error}</p>
+          <div className="glass-morphism p-6 rounded-xl text-white">
+            <h3 className="font-semibold text-lg mb-2">Oryginalny Link</h3>
+            <div className="flex items-center gap-3 bg-neutral-900/50 p-3 rounded-lg">
+              <Link2 className="h-5 w-5 text-blue-400 flex-shrink-0" />
+              <a
+                href={results.originalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 transition-colors break-all text-sm"
+              >
+                {results.originalUrl}
+              </a>
             </div>
           </div>
-        </motion.div>
-      )}
 
-      {/* Results */}
-      {result && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          {/* Product Info */}
-          {result.productInfo && (
-            <div className="glass-morphism rounded-2xl p-8">
-              <h3 className="text-xl font-semibold text-white mb-6">Informacje o produkcie</h3>
-              <div className="flex items-center space-x-6">
-                {result.productInfo.image && (
-                  <img
-                    src={result.productInfo.image || "/placeholder.svg"}
-                    alt={result.productInfo.title || "Produkt"}
-                    className="w-20 h-20 rounded-lg object-cover"
-                  />
-                )}
-                <div className="flex-1">
-                  <h4 className="text-lg font-medium text-white mb-2">
-                    {result.productInfo.title || "Nieznany produkt"}
-                  </h4>
-                  <div className="flex items-center space-x-4 text-sm text-white/60">
-                    {result.productInfo.platform && <span>Platforma: {result.productInfo.platform}</span>}
-                    {result.productInfo.seller && <span>Sprzedawca: {result.productInfo.seller}</span>}
-                    {result.productInfo.price && (
-                      <span className="text-blue-400 font-bold text-lg">{result.productInfo.price}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Agent Links */}
-          <div className="glass-morphism rounded-2xl p-8">
-            <h3 className="text-xl font-semibold text-white mb-6">Linki do agentów ({agents.length})</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {result.agentLinks.map((agent, index) => (
-                <motion.div
-                  key={agent.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-white/5 rounded-xl p-6 hover:bg-white/10 transition-all duration-300"
+          <div className="glass-morphism p-6 rounded-xl text-white">
+            <h3 className="font-semibold text-lg mb-4">Linki Pośredników</h3>
+            <ul className="space-y-4">
+              {results.convertedLinks.map((link) => (
+                <li
+                  key={link.key}
+                  className="p-4 border border-neutral-800 bg-neutral-900/50 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-4 h-4 rounded-full ${agent.color}`} />
-                      <h4 className="text-lg font-semibold text-white">{agent.name}</h4>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="flex items-center space-x-1">
-                        {[...Array(5)].map((_, i) => (
-                          <div
-                            key={i}
-                            className={`w-3 h-3 rounded-full ${
-                              i < Math.floor(agent.rating) ? "bg-yellow-400" : "bg-gray-600"
-                            }`}
-                          />
-                        ))}
-                        <span className="text-white/60 text-sm ml-1">{agent.rating}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <div className="text-white/60 text-sm mb-2">Opłata serwisowa: {agent.fee}</div>
-                    <div className="flex flex-wrap gap-1">
-                      {agent.features.map((feature, featureIndex) => (
-                        <span
-                          key={featureIndex}
-                          className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded border border-blue-500/30"
-                        >
-                          {feature}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="text"
-                      value={agent.url}
-                      readOnly
-                      className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/70 text-xs"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => copyToClipboard(agent.url, index)}
-                      className="bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
+                  <div className="flex-grow">
+                    <p className="font-semibold text-white">{link.name}</p>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-400 hover:text-blue-300 transition-colors break-all"
                     >
-                      {copiedIndex === index ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => window.open(agent.url, "_blank")}
-                      className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
+                      {link.url}
+                    </a>
                   </div>
-                </motion.div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCopy(link.url)}
+                    className="w-full sm:w-auto text-neutral-300 hover:bg-neutral-700 hover:text-white self-start sm:self-center"
+                  >
+                     {/* Uproszczona wersja przycisku kopiowania bez AnimatePresence dla spójności */}
+                     {copiedLink === link.url ? (
+                        <>
+                          <Check className="mr-2 h-4 w-4 text-green-400" />
+                          Skopiowano
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="mr-2 h-4 w-4" />
+                          Kopiuj
+                        </>
+                      )}
+                  </Button>
+                </li>
               ))}
-            </div>
-          </div>
-
-          {/* Comparison Table */}
-          <div className="glass-morphism rounded-2xl p-8">
-            <h3 className="text-xl font-semibold text-white mb-6">Porównanie agentów</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left text-white/80 py-3">Agent</th>
-                    <th className="text-left text-white/80 py-3">Opłata</th>
-                    <th className="text-left text-white/80 py-3">Ocena</th>
-                    <th className="text-left text-white/80 py-3">Główne cechy</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.agentLinks.map((agent, index) => (
-                    <tr key={index} className="border-b border-white/5">
-                      <td className="py-3">
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-3 h-3 rounded-full ${agent.color}`} />
-                          <span className="text-white">{agent.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 text-white/70">{agent.fee}</td>
-                      <td className="py-3 text-white/70">{agent.rating}/5</td>
-                      <td className="py-3 text-white/70">{agent.features[0]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Tips */}
-          <div className="glass-morphism rounded-2xl p-6">
-            <h4 className="text-lg font-semibold text-white mb-4">Wskazówki wyboru agenta</h4>
-            <ul className="space-y-2 text-white/70 text-sm">
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2">•</span>
-                Porównaj opłaty serwisowe - różnią się między agentami
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2">•</span>
-                Sprawdź jakość QC zdjęć w opiniach użytkowników
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2">•</span>
-                Wybierz agenta z dobrym wsparciem w Twoim języku
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2">•</span>
-                Zwróć uwagę na czas przetwarzania zamówień
-              </li>
             </ul>
           </div>
         </motion.div>
       )}
-    </div>
+    </motion.div>
   )
 }

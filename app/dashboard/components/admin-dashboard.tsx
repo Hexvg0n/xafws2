@@ -17,19 +17,21 @@ import {
   Package,
   Loader2,
   Edit,
+  Send,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // ====================================================================
 // --- DEFINICJE TYPÓW ---
 // ====================================================================
 type UserRole = 'root' | 'admin' | 'adder';
 type User = { _id: string; nickname: string; role: UserRole; status: 'aktywny' | 'oczekujący' | 'zawieszony' | 'zablokowany'; createdAt: string; };
-type Product = { _id: string; name: string; imageUrl: string; sourceUrl: string; };
+type Product = { _id: string; name: string; thumbnailUrl?: string; mainImages: string[]; sourceUrl: string; };
 type AdminTab = "stats" | "products" | "user-management" | "user-approval";
 
 // ====================================================================
@@ -76,35 +78,83 @@ function CreateUserForm({ onFormSubmit, onCancel, creatingUserRole }: { onFormSu
 function AddProductForm({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
   const [sourceUrl, setSourceUrl] = useState("");
   const [name, setName] = useState("");
-  const [isAdding, setIsAdding] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const handleAddProduct = async () => {
-    if (!sourceUrl || !name) {
-        alert("Link do produktu oraz nazwa są wymagane.");
-        return;
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImageUrl("");
+      const reader = new FileReader();
+      reader.onloadend = () => { setImagePreview(reader.result as string); };
+      reader.readAsDataURL(file);
     }
-    setIsAdding(true);
+  };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImageUrl(e.target.value);
+    setImageFile(null);
+    setImagePreview(e.target.value);
+  };
+
+  const handleAddProduct = async () => {
+    if (!name || !sourceUrl) {
+      setError("Nazwa produktu oraz link źródłowy są wymagane.");
+      return;
+    }
+    if (!imageFile && !imageUrl) {
+      setError("Zdjęcie główne (z pliku lub URL) jest wymagane.");
+      return;
+    }
+
+    setIsProcessing(true);
     setError(null);
+
     try {
-        const response = await fetch('/api/products', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sourceUrl, name }),
-        });
-        const result = await response.json();
-        if (!response.ok) {
-            throw new Error(result.error || "Nieznany błąd API");
-        }
-        alert(`Produkt "${result.name}" został pomyślnie dodany!`);
-        setSourceUrl("");
-        setName("");
-        onSave();
-        onCancel();
-    } catch (error) {
-        setError((error as Error).message);
+      const formData = new FormData();
+      if (imageFile) {
+        formData.append('file', imageFile);
+      } else if (imageUrl) {
+        formData.append('imageUrl', imageUrl);
+      }
+
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const uploadResult = await uploadResponse.json();
+      if (!uploadResponse.ok) {
+        throw new Error(uploadResult.error || "Błąd przesyłania zdjęcia.");
+      }
+      
+      const { thumbnailUrl } = uploadResult;
+
+      const productData = { name, sourceUrl, thumbnailUrl };
+
+      const productResponse = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+      });
+
+      const productResult = await productResponse.json();
+      if (!productResponse.ok) {
+        throw new Error(productResult.error || "Nieznany błąd API podczas zapisu produktu.");
+      }
+
+      alert(`Produkt "${productResult.name}" został pomyślnie dodany!`);
+      onSave();
+      onCancel();
+
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
-        setIsAdding(false);
+      setIsProcessing(false);
     }
   };
 
@@ -113,32 +163,45 @@ function AddProductForm({ onSave, onCancel }: { onSave: () => void; onCancel: ()
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Dodaj Nowy Produkt</DialogTitle>
-          <DialogDescription>Wpisz nazwę i wklej link z Taobao, Weidian lub 1688. Dane zostaną pobrane automatycznie.</DialogDescription>
+          <DialogDescription>Wypełnij dane, dodaj zdjęcie główne i link. Reszta danych zostanie pobrana automatycznie.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-4">
-            <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">Nazwa Produktu *</label>
-                <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="np. XaffReps T-Shirt"
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">Link do produktu *</label>
-                <Input
-                    value={sourceUrl}
-                    onChange={(e) => setSourceUrl(e.target.value)}
-                    placeholder="Wklej link do produktu..."
-                />
-            </div>
-            {error && <p className="text-red-400 text-sm">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Nazwa Produktu *</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="np. XaffReps T-Shirt"/>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Link do produktu (1688, Taobao, Weidian) *</label>
+            <Input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="Wklej link..."/>
+          </div>
+          <div>
+             <label className="block text-sm font-medium text-white/80 mb-2">Zdjęcie główne *</label>
+             <Tabs defaultValue="upload" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="upload">Prześlij plik</TabsTrigger>
+                    <TabsTrigger value="url">Wklej URL</TabsTrigger>
+                </TabsList>
+                <TabsContent value="upload" className="pt-2">
+                   <Input type="file" accept="image/*" onChange={handleFileChange} />
+                </TabsContent>
+                <TabsContent value="url" className="pt-2">
+                   <Input type="url" placeholder="https://..." value={imageUrl} onChange={handleUrlChange} />
+                </TabsContent>
+            </Tabs>
+            {imagePreview && (
+                <div className="mt-4 flex justify-center">
+                    <Image src={imagePreview} alt="Podgląd" width={150} height={150} className="rounded-md object-cover w-36 h-36"/>
+                </div>
+            )}
+          </div>
+          {error && <p className="text-red-400 text-sm pt-2">{error}</p>}
         </div>
         <DialogFooter>
-            <Button onClick={handleAddProduct} disabled={isAdding}>
-                {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
-                <span className="ml-2">Dodaj Produkt</span>
-            </Button>
+          <Button onClick={onCancel} variant="ghost">Anuluj</Button>
+          <Button onClick={handleAddProduct} disabled={isProcessing}>
+            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
+            <span className="ml-2">{isProcessing ? "Przetwarzanie..." : "Dodaj Produkt"}</span>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -151,17 +214,54 @@ function EditProductForm({ onSave, onCancel, productToEdit }: { onSave: () => vo
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const initialPreview = productToEdit.thumbnailUrl || productToEdit.mainImages?.[0] || null;
+  const [imagePreview, setImagePreview] = useState<string | null>(initialPreview);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImageUrl("");
+      const reader = new FileReader();
+      reader.onloadend = () => { setImagePreview(reader.result as string); };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImageUrl(e.target.value);
+    setImageFile(null);
+    setImagePreview(e.target.value);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     setError(null);
     try {
+      let finalThumbnailUrl = productToEdit.thumbnailUrl;
+
+      if (imageFile || (imageUrl && imageUrl !== initialPreview)) {
+        const formData = new FormData();
+        if (imageFile) formData.append('file', imageFile);
+        else if (imageUrl) formData.append('imageUrl', imageUrl);
+
+        const uploadResponse = await fetch('/api/upload', { method: 'POST', body: formData });
+        const uploadResult = await uploadResponse.json();
+        if (!uploadResponse.ok) throw new Error(uploadResult.error || "Błąd przesyłania zdjęcia.");
+        finalThumbnailUrl = uploadResult.thumbnailUrl;
+      }
+
       const response = await fetch(`/api/products/${productToEdit._id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, sourceUrl }),
+        body: JSON.stringify({ name, sourceUrl, thumbnailUrl: finalThumbnailUrl }),
       });
+
       if (!response.ok) throw new Error((await response.json()).error || 'Błąd serwera');
+      
       alert("Produkt zaktualizowany!");
       onSave();
       onCancel();
@@ -179,8 +279,34 @@ function EditProductForm({ onSave, onCancel, productToEdit }: { onSave: () => vo
           <DialogTitle>Edytuj Produkt</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-          <div><label className="text-sm font-medium">Nazwa</label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
-          <div><label className="text-sm font-medium">Link źródłowy</label><Input type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} required /></div>
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Nazwa</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Link źródłowy</label>
+            <Input type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} required />
+          </div>
+          <div>
+             <label className="block text-sm font-medium text-white/80 mb-2">Zmień zdjęcie główne</label>
+             <Tabs defaultValue="upload" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="upload">Prześlij plik</TabsTrigger>
+                    <TabsTrigger value="url">Wklej URL</TabsTrigger>
+                </TabsList>
+                <TabsContent value="upload" className="pt-2">
+                   <Input type="file" accept="image/*" onChange={handleFileChange} />
+                </TabsContent>
+                <TabsContent value="url" className="pt-2">
+                   <Input type="url" placeholder="https://..." value={imageUrl} onChange={handleUrlChange} />
+                </TabsContent>
+            </Tabs>
+            {imagePreview && (
+                <div className="mt-4 flex justify-center">
+                    <Image src={imagePreview} alt="Podgląd" width={150} height={150} className="rounded-md object-cover w-36 h-36"/>
+                </div>
+            )}
+          </div>
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onCancel}>Anuluj</Button>
@@ -202,6 +328,7 @@ function ProductManagerView() {
     const [isLoading, setIsLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [isNotifying, setIsNotifying] = useState<string | null>(null);
 
     const fetchProducts = useCallback(async () => {
         setIsLoading(true);
@@ -221,6 +348,28 @@ function ProductManagerView() {
         if (response.ok) { alert("Produkt usunięty."); fetchProducts(); }
         else { alert("Błąd podczas usuwania produktu."); }
     };
+
+    const handleSendToDiscord = async (productId: string) => {
+        if (!confirm("Czy na pewno chcesz opublikować ten produkt na Discordzie?")) return;
+
+        setIsNotifying(productId);
+        try {
+            const response = await fetch(`/api/products/${productId}/notify-discord`, {
+                method: 'POST',
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Wystąpił nieznany błąd.');
+            }
+            alert(result.message);
+        } catch (error) {
+            console.error(error);
+            alert(`Błąd: ${(error as Error).message}`);
+        } finally {
+            setIsNotifying(null);
+        }
+    };
     
     if (isLoading) return <p className="text-center text-white/70">Ładowanie...</p>;
 
@@ -235,13 +384,28 @@ function ProductManagerView() {
                 {products.length > 0 ? products.map(product => (
                     <div key={product._id} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
                         <div className="flex items-center gap-4">
-                            <Image src={product.imageUrl} alt={product.name} width={64} height={64} className="rounded-md object-cover w-16 h-16"/>
+                            <Image 
+                                src={product.thumbnailUrl || product.mainImages?.[0] || '/placeholder.png'} 
+                                alt={product.name} 
+                                width={64} 
+                                height={64} 
+                                className="rounded-md object-cover w-16 h-16"
+                            />
                             <div>
                                 <p className="font-semibold text-white">{product.name}</p>
                                 <a href={product.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">Link do źródła</a>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
+                           <Button 
+                                onClick={() => handleSendToDiscord(product._id)} 
+                                size="sm" 
+                                variant="ghost" 
+                                title="Wyślij na Discorda"
+                                disabled={isNotifying === product._id}
+                            >
+                                {isNotifying === product._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 text-purple-400" />}
+                           </Button>
                            <Button onClick={() => setEditingProduct(product)} size="sm" variant="ghost" title="Edytuj"><Edit className="w-4 h-4 text-blue-400" /></Button>
                            <Button onClick={() => handleDeleteProduct(product._id)} size="sm" variant="ghost" title="Usuń"><Trash2 className="w-4 h-4 text-red-500" /></Button>
                         </div>
@@ -385,7 +549,6 @@ function UserApprovalView() {
         </div>
     );
 }
-
 
 // ====================================================================
 // --- GŁÓWNY KOMPONENT DASHBOARDU ---
