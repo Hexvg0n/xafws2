@@ -2,76 +2,116 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '../../auth/[...nextauth]/route'; // Upewnij się, że ścieżka jest poprawna
 import dbConnect from '@/lib/dbConnect';
 import ProductModel from '@/models/Product';
-import fs from 'fs/promises';
-import path from 'path';
+import mongoose from 'mongoose';
 
-interface Params {
-    params: { id: string }
+type RouteContext = {
+    params: {
+        id: string;
+    }
 }
 
-// Funkcja PATCH do aktualizacji produktu
-export async function PATCH(req: Request, { params }: Params) {
+// Funkcja pomocnicza do sprawdzania uprawnień
+const hasPermission = (session: any): boolean => {
+    if (!session?.user?.role) return false;
+    const allowedRoles: string[] = ['root', 'admin', 'adder'];
+    return allowedRoles.includes(session.user.role);
+}
+
+
+export async function GET(_req: Request, context: RouteContext) {
+    const { id } = context.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return NextResponse.json({ error: 'Nieprawidłowy format ID produktu.' }, { status: 400 });
+    }
+
+    try {
+        await dbConnect();
+        const product = await ProductModel.findById(id);
+
+        if (!product) {
+            return NextResponse.json({ error: 'Produkt nie został znaleziony.' }, { status: 404 });
+        }
+
+        return NextResponse.json(product);
+    } catch (error) {
+        console.error("Błąd podczas pobierania produktu:", error);
+        return NextResponse.json({ error: 'Wystąpił błąd serwera.' }, { status: 500 });
+    }
+}
+
+
+// --- PATCH Handler (Update a product) ---
+export async function PATCH(req: Request, context: RouteContext) {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-        return NextResponse.json({ error: 'Brak autoryzacji' }, { status: 401 });
+    if (!hasPermission(session)) {
+        return NextResponse.json({ error: 'Brak autoryzacji lub niewystarczające uprawnienia.' }, { status: 403 });
+    }
+
+    const { id } = context.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return NextResponse.json({ error: 'Nieprawidłowy format ID produktu.' }, { status: 400 });
     }
 
     try {
         const body = await req.json();
-        const { name, sourceUrl } = body;
+        const { name, sourceUrl, thumbnailUrl } = body;
 
-        if (!name && !sourceUrl) {
-            return NextResponse.json({ error: "Brak danych do aktualizacji." }, { status: 400 });
+        const updateData: { [key: string]: any } = {};
+        if (name) updateData.name = name;
+        if (sourceUrl) updateData.sourceUrl = sourceUrl;
+        if (thumbnailUrl) updateData.thumbnailUrl = thumbnailUrl;
+
+        if (Object.keys(updateData).length === 0) {
+            return NextResponse.json({ error: 'Należy podać przynajmniej jedno pole do aktualizacji.' }, { status: 400 });
         }
 
         await dbConnect();
-        
-        const updatedProduct = await ProductModel.findByIdAndUpdate(
-            params.id,
-            { name, sourceUrl },
-            { new: true, runValidators: true } // 'new: true' zwraca zaktualizowany dokument
-        );
+        const updatedProduct = await ProductModel.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
 
         if (!updatedProduct) {
-            return NextResponse.json({ error: "Nie znaleziono produktu." }, { status: 404 });
+            return NextResponse.json({ error: 'Produkt nie został znaleziony.' }, { status: 404 });
         }
 
-        return NextResponse.json(updatedProduct, { status: 200 });
-
+        return NextResponse.json(updatedProduct);
     } catch (error) {
         console.error("Błąd podczas aktualizacji produktu:", error);
-        return NextResponse.json({ error: 'Błąd serwera.' }, { status: 500 });
+        if (error instanceof mongoose.Error.ValidationError) {
+             return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+        return NextResponse.json({ error: 'Wystąpił błąd serwera.' }, { status: 500 });
     }
 }
 
-// Funkcja DELETE do usuwania produktu
-export async function DELETE(req: Request, { params }: Params) {
+// --- DELETE Handler (Delete a product) ---
+export async function DELETE(_req: Request, context: RouteContext) {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.role || !['admin', 'root'].includes(session.user.role)) {
-        return NextResponse.json({ error: 'Brak uprawnień' }, { status: 403 });
+     if (!hasPermission(session)) {
+        return NextResponse.json({ error: 'Brak autoryzacji lub niewystarczające uprawnienia.' }, { status: 403 });
+    }
+
+    const { id } = context.params;
+
+     if (!mongoose.Types.ObjectId.isValid(id)) {
+        return NextResponse.json({ error: 'Nieprawidłowy format ID produktu.' }, { status: 400 });
     }
 
     try {
         await dbConnect();
-        const productToDelete = await ProductModel.findByIdAndDelete(params.id);
+        const deletedProduct = await ProductModel.findByIdAndDelete(id);
 
-        if (!productToDelete) {
-            return NextResponse.json({ error: "Nie znaleziono produktu do usunięcia." }, { status: 404 });
+        if (!deletedProduct) {
+            return NextResponse.json({ error: 'Produkt nie został znaleziony.' }, { status: 404 });
         }
 
-        // Usuwamy również plik obrazka z serwera
-        if (productToDelete.imageUrl) {
-            const imagePath = path.join(process.cwd(), 'public', productToDelete.imageUrl);
-            await fs.unlink(imagePath).catch(err => console.log("Nie udało się usunąć pliku obrazka:", err.message));
-        }
-
-        return NextResponse.json({ message: "Produkt został pomyślnie usunięty." }, { status: 200 });
+        return NextResponse.json({ message: 'Produkt został pomyślnie usunięty.' });
 
     } catch (error) {
         console.error("Błąd podczas usuwania produktu:", error);
-        return NextResponse.json({ error: 'Błąd serwera.' }, { status: 500 });
+        return NextResponse.json({ error: 'Wystąpił błąd serwera.' }, { status: 500 });
     }
 }
