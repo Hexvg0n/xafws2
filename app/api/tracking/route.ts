@@ -5,13 +5,20 @@ import validator from "validator"
 import type { TrackingData, TrackingEvent } from "@/types/tracking"
 
 const TRACKING_URLS = [
-  "http://106.55.5.75:8082/en/trackIndex.htm",
-  "http://114.132.51.252:8082/en/trackIndex.htm",
-  "http://47.112.107.11:8082/en/trackIndex.htm",
-  "http://39.101.71.24:8082/en/trackIndex.htm",
-  "http://120.78.2.65:8082/en/trackIndex.htm",
-  "http://www.hsd-ex.com:8082/trackIndex.htm",
-  "http://www.gdasgyl.com:8082/en/trackIndex.htm",
+"http://106.55.5.75:8082/en/trackIndex.htm",
+"http://114.132.51.252:8082/en/trackIndex.htm",
+"http://47.112.107.11:8082/en/trackIndex.htm",
+"http://39.101.71.24:8082/en/trackIndex.htm",
+"http://120.78.2.65:8082/en/trackIndex.htm",
+"http://www.hsd-ex.com:8082/trackIndex.htm",
+"http://www.gdasgyl.com:8082/en/trackIndex.htm",
+"http://120.24.176.176:8082/en/trackIndex.htm",
+"http://111.230.211.49:8082/trackIndex.htm",
+"http://111.230.15.119:8082/trackIndex.htm",
+"http://120.77.221.225:8082/trackIndex.htm",
+"http://49.234.188.236:8082/trackIndex.htm",
+"http://115.29.184.71:8082/trackIndex.htm",
+"http://114.132.51.252:8082/trackIndex.htm"
 ]
 
 const LABEL_NORMALIZATION: { [key: string]: string } = {

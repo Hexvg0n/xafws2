@@ -3,61 +3,113 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
+import {
+  Users, UserCheck, BarChart3, Package, Loader2, KeyRound,
+  Edit, Trash2, Shield, UserPlus, CheckCircle, X, Clock, ShieldOff
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AdminTab, UserRole } from "@/lib/types"; // Importujemy typy z centralnej lokalizacji
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 
-// Importujemy GŁÓWNE WIDOKI poszczególnych zakładek
-import { ProductManagerView } from "./components/ProductManagerView";
-import { UserManagementView } from "./components/UserManagementView";
-import { UserApprovalView } from "./components/UserApprovalView";
+// Importy komponentów-widoków
+import { ProductManager } from "./components/ProductManager";
+import { UserManager } from "./components/UserManager";
+import { UserApproval } from "./components/UserApproval";
+import { RoleManager } from "./components/RoleManager";
 
-import { BarChart3, Package, Users, UserCheck } from "lucide-react";
+// Definicje typów
+type UserRole = 'root' | 'admin' | 'adder' | 'user';
+type AdminTab = "stats" | "products" | "user-management" | "user-approval" | "role-management";
 
-export default function AdminDashboardPage() {
+// Komponent-zaślepka dla statystyk
+const StatsView = () => (
+    <Card className="glass-morphism border-white/10 text-white">
+        <CardHeader><CardTitle>Statystyki</CardTitle></CardHeader>
+        <CardContent className="text-center py-12 text-white/70">Ta sekcja jest w trakcie budowy.</CardContent>
+    </Card>
+);
+
+// --- GŁÓWNY KOMPONENT STRONY DASHBOARDU ---
+export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>("products");
   const { data: session, status } = useSession();
-  const userRole = session?.user?.role as UserRole | undefined;
 
+  // Kluczowa zmiana: upewniamy się, że rola jest odczytywana poprawnie i bezpiecznie
+  const userRole = session?.user?.role;
+
+  // Definicja zakładek
   const tabs: { id: AdminTab; name: string; icon: ReactNode; roles: UserRole[] }[] = [
     { id: "stats", name: "Statystyki", icon: <BarChart3 className="w-4 h-4" />, roles: ["admin", "root"] },
-    { id: "user-approval", name: "Zatwierdź Użytkowników", icon: <UserCheck className="w-4 h-4" />, roles: ["root"] },
-    { id: "user-management", name: "Zarządzaj Użytkownikami", icon: <Users className="w-4 h-4" />, roles: ["admin", "root"] },
     { id: "products", name: "Produkty", icon: <Package className="w-4 h-4" />, roles: ["admin", "root", "adder"] },
+    { id: "user-management", name: "Użytkownicy", icon: <Users className="w-4 h-4" />, roles: ["admin", "root"] },
+    { id: "user-approval", name: "Do zatwierdzenia", icon: <UserCheck className="w-4 h-4" />, roles: ["root"] },
+    { id: "role-management", name: "Zarządzaj Rolami", icon: <KeyRound className="w-4 h-4" />, roles: ["root"] },
   ];
 
   const availableTabs = tabs.filter(tab => userRole && tab.roles.includes(userRole));
 
   useEffect(() => {
+    // Debugowanie: sprawdź w konsoli przeglądarki, jaką rolę widzi aplikacja
+    if (session) {
+      console.log("Sesja użytkownika:", session);
+      console.log("Wykryta rola:", userRole);
+      console.log("Dostępne zakładki:", availableTabs.map(t => t.name));
+    }
+
     if (userRole && availableTabs.length > 0 && !availableTabs.some(tab => tab.id === activeTab)) {
         setActiveTab(availableTabs[0].id);
     }
-  }, [userRole, activeTab, availableTabs]);
+  }, [session, userRole, activeTab, availableTabs]);
 
   const renderContent = () => {
     switch (activeTab) {
-      case "stats": return <div className="text-white text-center p-8">Widok Statystyk (do zaimplementowania)</div>;
-      case "user-approval": return <UserApprovalView />;
-      case "user-management": return <UserManagementView />;
-      case "products": return <ProductManagerView />;
-      default: return <div className="text-white text-center p-8">Wybierz zakładkę</div>;
+      case "stats": return <StatsView />;
+      case "products": return <ProductManager />;
+      case "user-management": return <UserManager />;
+      case "user-approval": return <UserApproval />;
+      case "role-management": return <RoleManager />;
+      default: return <div className="text-white text-center p-8 glass-morphism rounded-2xl">Wybierz zakładkę</div>;
     }
   };
 
-  if (status === 'loading') return <p className="text-center text-2xl text-white/70 pt-20">Ładowanie panelu...</p>;
-  if (status === 'unauthenticated') return <p className="text-center text-2xl text-white/70 pt-20">Brak dostępu.</p>;
+  if (status === 'loading') {
+    return (
+        <div className="flex justify-center items-center min-h-screen">
+            <Loader2 className="w-12 h-12 animate-spin text-emerald-500" />
+        </div>
+    );
+  }
+  
+  if (status === 'unauthenticated' || !userRole || availableTabs.length === 0) {
+    return <p className="text-center text-2xl text-red-400 pt-20">Brak dostępu lub uprawnień do wyświetlenia panelu.</p>;
+  }
 
   return (
-    <div className="space-y-8 mt-20">
-      <div className="glass-morphism rounded-2xl p-2"><div className="flex flex-wrap gap-2">
-        {availableTabs.map((tab) => (
-          <Button key={tab.id} onClick={() => setActiveTab(tab.id)} variant={activeTab === tab.id ? "default" : "ghost"} className={`flex items-center space-x-2 ${activeTab === tab.id ? "bg-blue-500 hover:bg-blue-600 text-white" : "text-white/60 hover:text-white hover:bg-white/10"}`}>
-            {tab.icon}<span>{tab.name}</span>
-          </Button>
-        ))}
-      </div></div>
-      <motion.div key={activeTab} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        {renderContent()}
-      </motion.div>
+    <div className="min-h-screen pt-20 pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+            <h1 className="text-3xl font-bold gradient-text mb-2">Panel Zarządzania</h1>
+            <p className="text-white/70">Zarządzaj treścią i użytkownikami XaffReps</p>
+        </div>
+        <div className="space-y-8">
+            <div className="glass-morphism rounded-2xl p-2">
+                <div className="flex flex-wrap gap-2">
+                {availableTabs.map((tab) => (
+                    <Button 
+                    key={tab.id} 
+                    onClick={() => setActiveTab(tab.id)} 
+                    variant={activeTab === tab.id ? "default" : "ghost"} 
+                    className={`flex items-center space-x-2 ${activeTab === tab.id ? "bg-emerald-500 hover:bg-emerald-600 text-white" : "text-white/60 hover:text-white hover:bg-white/10"}`}
+                    >
+                    {tab.icon}<span>{tab.name}</span>
+                    </Button>
+                ))}
+                </div>
+            </div>
+            <motion.div key={activeTab} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                {renderContent()}
+            </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

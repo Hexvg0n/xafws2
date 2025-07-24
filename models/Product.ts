@@ -1,16 +1,21 @@
 // models/Product.ts
+
 import mongoose, { Schema } from 'mongoose';
 
 const ProductSchema = new Schema({
-    name: { type: String, required: true, trim: true },
-    sourceUrl: { type: String, required:true, unique: true },
-    
-    // NOWE POLE NA GŁÓWNĄ MINIATURKĘ
-    thumbnailUrl: { type: String }, 
-    
+    name: { 
+        type: String, 
+        required: [true, 'Nazwa produktu jest wymagana.'], 
+        trim: true 
+    },
+    sourceUrl: { 
+        type: String, 
+        required: true, 
+        unique: true 
+    },
     platform: { type: String, enum: ['1688', 'Taobao', 'Weidian'] },
-    mainImages: [String],
-    descriptionImages: [String],
+    mainImages: [String], 
+    descriptionImages: [String], 
     priceCNY: { type: Number },
     availableColors: [String],
     availableSizes: [String],
@@ -19,6 +24,12 @@ const ProductSchema = new Schema({
         shopLogo: String,
         shopId: String,
     },
+    dimensions: {
+        length: Number,
+        width: Number,
+        height: Number,
+    },
+    skus: [mongoose.Schema.Types.Mixed], 
     createdBy: {
         type: Schema.Types.ObjectId,
         ref: 'User',
