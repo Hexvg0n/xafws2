@@ -160,7 +160,13 @@ const middlemen: Record<string, Middleman> = {
       tmall: "tmall"
     },
     itemIDPattern: [/id=(\d+)/, /\/offer\/(\d+)\.html/, /itemID=(\d+)/, /itemI[dD]=(\d+)/],
-    requiresDecoding: false
+    requiresDecoding: false,
+    sourceCodeToPlatform: {
+        "taobao": "taobao",
+        "ali_1688": "1688",
+        "weidian": "weidian",
+        "tmall": "tmall"
+    }
   },
   joyabuy: {
     name: "Joyabuy",
@@ -270,7 +276,14 @@ function convertMiddlemanToOriginal(url: string): string | null {
                         const sourceCode = sourceMatch[1];
                         platformName = middleman.sourceCodeToPlatform[sourceCode] || null;
                     }
-                } else if (middleman.requiresDecoding) {
+                } else if (middlemanName === 'cnfans' && middleman.sourceCodeToPlatform) {
+                    const shopTypeMatch = processedUrl.match(/[?&]shop_type=([^&]+)/);
+                     if (shopTypeMatch && shopTypeMatch[1]) {
+                        const shopType = shopTypeMatch[1];
+                        platformName = middleman.sourceCodeToPlatform[shopType] || null;
+                    }
+                }
+                else if (middleman.requiresDecoding) {
                     platformName = identifyPlatform(processedUrl);
                 }
 
@@ -347,7 +360,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Brak wymaganego parametru URL' }, { status: 400, headers });
     }
 
-    let originalProductUrl = convertMiddlemanToOriginal(url) || identifyPlatform(url) ? url : null;
+    let originalProductUrl = convertMiddlemanToOriginal(url) || (identifyPlatform(url) ? url : null);
 
     if (originalProductUrl) {
          const platform = identifyPlatform(originalProductUrl);

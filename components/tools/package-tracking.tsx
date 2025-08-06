@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Link2, Search, Package, Truck, Clock, CheckCircle, AlertCircle, MapPin, Calendar, Globe } from "lucide-react"
+import { Link2, Search, Package, Truck, Clock, CheckCircle, AlertCircle, MapPin, Calendar, Globe, History } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { TrackingData } from "@/types/tracking"
 
@@ -35,6 +35,35 @@ export function PackageTracking() {
   const [isTracking, setIsTracking] = useState(false)
   const [result, setResult] = useState<TrackingResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [recentSearches, setRecentSearches] = useState<string[]>([])
+
+  useEffect(() => {
+    try {
+      const storedSearches = localStorage.getItem("recentTrackingSearches")
+      if (storedSearches) {
+        setRecentSearches(JSON.parse(storedSearches))
+      }
+    } catch (e) {
+      console.error("Failed to parse recent searches from localStorage", e)
+    }
+  }, [])
+
+  const addRecentSearch = (trackingNumber: string) => {
+    setRecentSearches(prevSearches => {
+      const updatedSearches = [trackingNumber, ...prevSearches.filter(n => n !== trackingNumber)].slice(0, 5)
+      try {
+        localStorage.setItem("recentTrackingSearches", JSON.stringify(updatedSearches))
+      } catch (e) {
+        console.error("Failed to save recent searches to localStorage", e)
+      }
+      return updatedSearches
+    })
+  }
+
+  const handleRecentSearchClick = (number: string) => {
+    setTrackingLink(number);
+    trackPackage(number);
+  }
 
   const extractTrackingNumber = (input: string): string => {
     // Jeśli to link, wyciągnij numer
@@ -57,14 +86,16 @@ export function PackageTracking() {
     return "pending"
   }
 
-  const trackPackage = async () => {
-    if (!trackingLink.trim()) return
+  const trackPackage = async (linkToTrack?: string) => {
+    const currentLink = linkToTrack || trackingLink;
+    if (!currentLink.trim()) return
 
     setIsTracking(true)
     setError(null)
 
     try {
-      const trackingNumber = extractTrackingNumber(trackingLink)
+      const trackingNumber = extractTrackingNumber(currentLink)
+      addRecentSearch(trackingNumber)
 
       const response = await fetch("/api/tracking", {
         method: "POST",
@@ -200,19 +231,25 @@ export function PackageTracking() {
             />
           </div>
 
-          <div className="text-sm text-white/60">
-            <p className="mb-2">Obsługiwane kurierzy i platformy:</p>
-            <div className="flex flex-wrap gap-2">
-              {["China Post", "HSD Express", "GD Express", "EMS", "17Track", "AfterShip"].map((service) => (
-                <span key={service} className="px-2 py-1 bg-white/10 rounded text-xs">
-                  {service}
-                </span>
-              ))}
+          {recentSearches.length > 0 && (
+            <div className="text-sm text-white/60">
+              <p className="mb-2 flex items-center"><History className="w-4 h-4 mr-2" /> Ostatnio sprawdzane:</p>
+              <div className="flex flex-wrap gap-2">
+                {recentSearches.map((number) => (
+                  <button
+                    key={number}
+                    onClick={() => handleRecentSearchClick(number)}
+                    className="px-2 py-1 bg-white/10 rounded text-xs hover:bg-white/20 transition-colors"
+                  >
+                    {number}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <Button
-            onClick={trackPackage}
+            onClick={() => trackPackage()}
             disabled={!trackingLink.trim() || isTracking}
             className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
           >

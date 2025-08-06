@@ -31,4 +31,4 @@ export type Product = {
 };
 
 
-export type AdminTab = "stats" | "products" | "user-management" | "user-approval";
+export type AdminTab = "stats" | "products" | "user-management" | "user-approval" | "promos" | "sellers" | "batches";

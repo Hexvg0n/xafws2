@@ -1,3 +1,4 @@
+// app/tools/link-converter/page.tsx
 "use client"
 
 import { useState } from "react"
@@ -78,7 +79,7 @@ export default function LinkConverterPage() {
         <motion.div variants={itemVariants} className="text-center space-y-4">
           <div className="flex justify-center">
             <div className="p-4 rounded-full bg-white/10 border border-white/20 shadow-xl">
-              <Link2 className="h-10 w-10 text-sky-300" />
+              <Link2 className="h-10 w-10 text-green-300" />
             </div>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight gradient-text">
@@ -97,7 +98,7 @@ export default function LinkConverterPage() {
               placeholder="https://item.taobao.com/item.htm?id=..."
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
-              className="flex-grow text-base bg-slate-800/60 border-slate-700 focus:ring-blue-700 focus:border-blue-700 text-white placeholder:text-slate-500 h-14 px-4"
+              className="flex-grow text-base bg-slate-800/60 border-slate-700 focus:ring-green-700 focus:border-green-700 text-white placeholder:text-slate-500 h-14 px-4"
               disabled={isLoading}
               onKeyDown={(e) => e.key === "Enter" && !isLoading && handleConvert()}
             />
@@ -105,7 +106,7 @@ export default function LinkConverterPage() {
               onClick={handleConvert}
               disabled={isLoading}
               size="lg"
-              className="w-full sm:w-auto text-base font-semibold bg-gradient-to-r from-[hsl(236,91%,55%)] to-[hsl(236,91%,55%)]  text-white shadow-lg shadow-sky-500/20 transition-all duration-300 ease-in-out h-14 px-8"
+              className="w-full sm:w-auto text-base font-semibold bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg shadow-green-500/20 transition-all duration-300 ease-in-out h-14 px-8"
             >
               {isLoading ? (
                 <>
@@ -140,15 +141,15 @@ export default function LinkConverterPage() {
             >
               <div className="glass-morphism p-6 text-white">
                 <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                  <Link2 className="h-5 w-5 text-sky-400" />
-                  <span className="text-[#b0fcf5]">Oryginalny Link</span>
+                  <Link2 className="h-5 w-5 text-green-400" />
+                  <span className="text-green-300">Oryginalny Link</span>
                 </h3>
                 <div className="flex items-center gap-3 bg-black/20 p-3 rounded-lg border border-slate-800">
                   <a
                     href={results.originalUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-400 hover:text-sky-300 transition-colors break-all text-sm"
+                    className="text-gray-400 hover:text-green-300 transition-colors break-all text-sm"
                   >
                     {results.originalUrl}
                   </a>
@@ -157,14 +158,14 @@ export default function LinkConverterPage() {
 
               <div className="glass-morphism p-6 text-white">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-sky-500" />
-                  <span className="text-[#b0fcf5]">Linki Pośredników</span>
+                  <Sparkles className="h-5 w-5 text-green-500" />
+                  <span className="text-green-300">Linki Pośredników</span>
                 </h3>
                 <ul className="space-y-3">
                   {results.convertedLinks.map((link) => (
                     <li
                       key={link.key}
-                      className="p-4 border border-slate-800 bg-slate-900/50 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all hover:border-sky-500/50 hover:bg-sky-900/20"
+                      className="p-4 border border-slate-800 bg-slate-900/50 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all hover:border-green-500/50 hover:bg-green-900/20"
                     >
                       <div className="flex-grow">
                         <p className="font-semibold text-white">{link.name}</p>
@@ -172,7 +173,7 @@ export default function LinkConverterPage() {
                           href={link.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-gray-400 hover:text-sky-300 transition-colors break-all"
+                          className="text-sm text-gray-400 hover:text-green-300 transition-colors break-all"
                         >
                           {link.url}
                         </a>
