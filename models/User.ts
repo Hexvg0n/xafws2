@@ -3,31 +3,34 @@
 import mongoose from 'mongoose';
 
 const UserSchema = new mongoose.Schema({
-  // ZMIANA: 'email' zastąpiony przez 'nickname'
   nickname: {
     type: String,
     required: [true, 'Proszę podać pseudonim.'],
-    unique: true,
     trim: true,
   },
-  password: {
+  email: {
     type: String,
-    required: [true, 'Proszę podać hasło.'],
+    unique: true,
+    trim: true,
+    sparse: true,
+  },
+  avatar: {
+    type: String,
   },
   role: {
     type: String,
     enum: {
-        values: ['root', 'admin', 'adder'],
+        // Dodajemy nową rolę 'user'
+        values: ['root', 'admin', 'adder', 'user'],
         message: 'Rola `{VALUE}` nie jest wspierana.'
     },
-    default: 'adder',
+    default: 'user', // 'user' jest teraz domyślną rolą
   },
   status: {
     type: String,
     enum: ['aktywny', 'oczekujący', 'zawieszony', 'zablokowany'],
-    default: 'oczekujący',
+    default: 'aktywny',
   },
-  //... reszta pól bez zmian
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -35,5 +38,7 @@ const UserSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
+
+UserSchema.index({ nickname: 1 }, { unique: true, partialFilterExpression: { email: { $exists: false } } });
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);

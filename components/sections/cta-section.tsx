@@ -10,7 +10,7 @@ export function CTASection() {
     <section className="py-20 relative overflow-hidden">
       {/* Background elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-blue-600/10 to-blue-400/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-emerald-600/10 to-emerald-400/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -23,13 +23,13 @@ export function CTASection() {
         >
           {/* Decorative elements */}
           <div className="absolute top-4 left-4">
-            <Sparkles className="w-6 h-6 text-blue-400 animate-pulse" />
+            <Sparkles className="w-6 h-6 text-emerald-400 animate-pulse" />
           </div>
           <div className="absolute top-4 right-4">
-            <Users className="w-6 h-6 text-blue-500 animate-pulse delay-500" />
+            <Users className="w-6 h-6 text-emerald-500 animate-pulse delay-500" />
           </div>
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-            <Zap className="w-6 h-6 text-blue-300 animate-pulse delay-1000" />
+            <Zap className="w-6 h-6 text-emerald-300 animate-pulse delay-1000" />
           </div>
 
           <motion.div
@@ -43,7 +43,7 @@ export function CTASection() {
               Gotowy na <span className="gradient-text">przygodę</span> z replikami?
             </h2>
             <p className="text-lg text-white/70 max-w-2xl mx-auto">
-              Dołącz do RepMafia już dziś i odkryj świat najwyższej jakości replik. Bezpłatne członkostwo,
+              Dołącz do XaffReps już dziś i odkryj świat najwyższej jakości replik. Bezpłatne członkostwo,
               nieograniczony dostęp do wszystkich funkcji.
             </p>
           </motion.div>
@@ -58,7 +58,7 @@ export function CTASection() {
             <MagneticButton>
               <Button
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 text-white font-semibold px-8 py-4 rounded-lg transition-all duration-200 group text-lg"
+                className="bg-gradient-to-r from-emerald-600 to-emerald-400 hover:from-emerald-700 hover:to-emerald-500 text-white font-semibold px-8 py-4 rounded-lg transition-all duration-200 group text-lg"
               >
                 Dołącz za Darmo
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />

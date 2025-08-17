@@ -1,69 +1,103 @@
-// app/api/auth/[...nextauth]/route.ts
-
 import NextAuth, { AuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
+import DiscordProvider from 'next-auth/providers/discord';
 import dbConnect from '@/lib/dbConnect';
 import UserModel from '@/models/User';
-import bcrypt from 'bcryptjs';
+import axios from 'axios';
 
-const nextAuthSecret = process.env.NEXTAUTH_SECRET;
-if (!nextAuthSecret) {
-    throw new Error("Proszę zdefiniować zmienną środowiskową NEXTAUTH_SECRET w .env.local");
-}
+// Definicja mapowania ról z Discorda na role w aplikacji
+const ROLE_MAPPINGS: { [discordRoleId: string]: string } = {
+    "ID_ROLI_ROOT_Z_DISCORDA": "root",
+    "ID_ROLI_ADMIN_Z_DISCORDA": "admin",
+    "ID_ROLI_ADDER_Z_DISCORDA": "adder",
+};
 
 export const authOptions: AuthOptions = {
     providers: [
-        CredentialsProvider({
-            name: 'credentials',
-            // ZMIANA: credentials teraz akceptują 'nickname'
-            credentials: {
-                nickname: { label: "Nickname", type: "text" },
-                password: { label: "Password", type: "password" }
-            },
-            async authorize(credentials) {
-                if (!credentials?.nickname || !credentials?.password) return null;
-                
-                await dbConnect();
-                // ZMIANA: Szukamy użytkownika po 'nickname'
-                const user = await UserModel.findOne({ nickname: credentials.nickname });
-
-                if (user && bcrypt.compareSync(credentials.password, user.password)) {
-                    if (user.status !== 'aktywny') {
-                        throw new Error(`Konto jest ${user.status}.`);
-                    }
-                    return {
-                        id: user._id.toString(),
-                        name: user.nickname, // ZMIANA: Przekazujemy nickname jako 'name'
-                        role: user.role,
-                        status: user.status,
-                    };
-                }
-                return null;
-            },
+        DiscordProvider({
+            clientId: process.env.DISCORD_CLIENT_ID!,
+            clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+            // Zakresy uprawnień, o które prosimy użytkownika
+            authorization: { params: { scope: 'identify guilds.join' } },
         }),
     ],
     callbacks: {
-        jwt({ token, user }) {
-            if (user) {
-                token.id = user.id;
-                token.role = (user as any).role;
-                token.name = user.name; // Upewniamy się, że nickname jest w tokenie
+        async jwt({ token, user, account, profile }) {
+            if (account && profile) {
+                await dbConnect();
+                
+                // Pobierz role użytkownika z serwera Discord
+                const discordRoles = await getDiscordRoles(profile.id);
+
+                // Znajdź najwyższą rangę użytkownika zgodnie z mapowaniem
+                const appRole = mapDiscordRolesToAppRole(discordRoles);
+
+                if (!appRole) {
+                     throw new Error("Brak wymaganej roli na serwerze Discord.");
+                }
+
+                // Zapisz lub zaktualizuj użytkownika w lokalnej bazie danych
+                const dbUser = await UserModel.findOneAndUpdate(
+                    { nickname: profile.username }, // Używamy nazwy z Discorda jako unikalnego identyfikatora
+                    {
+                        nickname: profile.username,
+                        role: appRole,
+                        status: 'aktywny', // Każdy zalogowany jest aktywny
+                        // Możesz tu zapisać więcej danych, np. discordId: profile.id
+                    },
+                    { upsert: true, new: true, setDefaultsOnInsert: true }
+                );
+                
+                // Przypisz dane do tokenu JWT
+                token.id = dbUser._id.toString();
+                token.role = dbUser.role;
+                token.name = dbUser.nickname;
             }
             return token;
         },
-        session({ session, token }: { session: any, token: any }) {
+        session({ session, token }) {
             if (session.user) {
-                session.user.id = token.id;
-                session.user.role = token.role;
-                session.user.name = token.name; // I w sesji
+                session.user.id = token.id as string;
+                session.user.role = token.role as 'root' | 'admin' | 'adder';
+                session.user.name = token.name as string;
             }
             return session;
         },
     },
-    session: { strategy: 'jwt' as const },
-    secret: nextAuthSecret,
-    pages: { signIn: '/login' },
+    session: { strategy: 'jwt' },
+    secret: process.env.NEXTAUTH_SECRET,
+    pages: {
+        signIn: '/login',
+        error: '/login', // Przekieruj na stronę logowania w razie błędu
+    },
 };
+
+// Funkcja pomocnicza do pobierania ról z Discord API
+async function getDiscordRoles(userId: string): Promise<string[]> {
+    const guildId = process.env.DISCORD_GUILD_ID;
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    const url = `https://discord.com/api/v10/guilds/${guildId}/members/${userId}`;
+
+    try {
+        const response = await axios.get(url, {
+            headers: { 'Authorization': `Bot ${botToken}` }
+        });
+        return response.data.roles || [];
+    } catch (error) {
+        console.error("Błąd podczas pobierania ról z Discorda:", error);
+        return [];
+    }
+}
+
+// Funkcja pomocnicza do mapowania ról
+function mapDiscordRolesToAppRole(discordRoles: string[]): string | null {
+    // Sprawdzamy w kolejności od najważniejszej roli do najmniej ważnej
+    if (discordRoles.includes("ID_ROLI_ROOT_Z_DISCORDA")) return "root";
+    if (discordRoles.includes("ID_ROLI_ADMIN_Z_DISCORDA")) return "admin";
+    if (discordRoles.includes("ID_ROLI_ADDER_Z_DISCORDA")) return "adder";
+    
+    return null; // Brak pasującej roli
+}
+
 
 const handler = NextAuth(authOptions);
 

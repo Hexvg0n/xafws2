@@ -1,3 +1,5 @@
+/* app/globals.css */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -30,11 +32,11 @@ body {
   }
 
   .gradient-border {
-    @apply bg-gradient-to-r from-blue-600 to-blue-400 p-[1px] rounded-lg;
+    @apply bg-gradient-to-r from-emerald-600 to-emerald-400 p-[1px] rounded-lg;
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-blue-500 to-blue-300 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-emerald-500 to-emerald-300 bg-clip-text text-transparent;
   }
 
   .text-hover-effect {
@@ -43,7 +45,7 @@ body {
 
   .text-hover-effect::before {
     content: "";
-    @apply absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-400 transform -translate-x-full transition-transform duration-300;
+    @apply absolute inset-0 bg-gradient-to-r from-emerald-600 to-emerald-400 transform -translate-x-full transition-transform duration-300;
   }
 
   .text-hover-effect:hover::before {

@@ -1,381 +1,193 @@
 "use client"
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { Link2, Search, Star, Download, Eye, AlertTriangle, Check } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
+import { Link2, Search, Loader2, AlertCircle, X, ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-interface QCGroup {
-  id: string
-  name: string
-  images: string[]
-  analysis: {
-    overallScore: number
-    lighting: number
-    clarity: number
-    angles: number
-    details: number
-  }
-  recommendations: string[]
-  flaws: string[]
+// Definicja typów na podstawie JSONa
+interface QcGroup {
+  order_no: string;
+  image_list: string[];
 }
 
-interface QCResult {
-  groups: QCGroup[]
-  overallScore: number
-  totalImages: number
+// Komponent dla modalu z galerią zdjęć
+function QcGalleryModal({ group, onClose }: { group: QcGroup; onClose: () => void }) {
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    const handleNext = () => {
+        setCurrentIndex((prev) => (prev + 1) % group.image_list.length);
+    };
+
+    const handlePrev = () => {
+        setCurrentIndex((prev) => (prev - 1 + group.image_list.length) % group.image_list.length);
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="relative w-full max-w-4xl h-[80vh]" // Ustawiamy wysokość kontenera
+                onClick={(e) => e.stopPropagation()}
+            >
+                <Button onClick={onClose} variant="ghost" size="icon" className="absolute -top-10 right-0 text-white/70 hover:text-white z-10">
+                    <X className="w-6 h-6" />
+                </Button>
+                
+                {/* KLUCZOWA ZMIANA: Dodajemy position: relative do kontenera obrazka */}
+                <div className="relative w-full h-full">
+                    <AnimatePresence mode="wait">
+                         <motion.div
+                            key={currentIndex}
+                            initial={{ opacity: 0, x: 50 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -50 }}
+                            transition={{ duration: 0.2 }}
+                            className="w-full h-full"
+                        >
+                            <Image
+                                src={group.image_list[currentIndex]}
+                                alt={`QC Image ${currentIndex + 1}`}
+                                layout="fill"
+                                objectFit="contain" // Używamy objectFit zamiast object-fit w klasie
+                                className="rounded-lg"
+                            />
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+
+                {/* Przyciski nawigacyjne */}
+                <Button onClick={handlePrev} variant="ghost" size="icon" className="absolute left-0 top-1/2 -translate-y-1/2 sm:-translate-x-12 bg-white/10 hover:bg-white/20">
+                    <ChevronLeft className="w-6 h-6" />
+                </Button>
+                <Button onClick={handleNext} variant="ghost" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2 sm:translate-x-12 bg-white/10 hover:bg-white/20">
+                    <ChevronRight className="w-6 h-6" />
+                </Button>
+
+                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-white/80 bg-black/50 px-3 py-1 rounded-full">
+                    {currentIndex + 1} / {group.image_list.length}
+                </div>
+            </motion.div>
+        </motion.div>
+    );
 }
+
 
 export function QCChecker() {
-  const [qcLink, setQcLink] = useState("")
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [result, setResult] = useState<QCResult | null>(null)
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
-  const [selectedImage, setSelectedImage] = useState(0)
+  const [url, setUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [qcGroups, setQcGroups] = useState<QcGroup[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<QcGroup | null>(null);
 
-  const analyzeQC = async () => {
-    if (!qcLink.trim()) return
-
-    setIsAnalyzing(true)
-
-    // Symulacja analizy QC z linku
-    setTimeout(() => {
-      const mockResult: QCResult = {
-        groups: [
-          {
-            id: "front-views",
-            name: "Widoki z przodu",
-            images: [
-              "/placeholder.svg?height=400&width=400",
-              "/placeholder.svg?height=400&width=400",
-              "/placeholder.svg?height=400&width=400",
-            ],
-            analysis: {
-              overallScore: 8.5,
-              lighting: 9.0,
-              clarity: 8.5,
-              angles: 8.0,
-              details: 8.5,
+  const handleFetchQc = async () => {
+    if (!url.trim()) return;
+    setIsLoading(true);
+    setError(null);
+    setQcGroups([]);
+    
+  try {
+        const response = await fetch('/api/qc', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.NEXT_PUBLIC_INTERNAL_API_KEY! 
             },
-            recommendations: ["Dodaj zdjęcie z boku", "Pokaż logo z bliska"],
-            flaws: ["Niewielka nierówność szwu", "Lekko asymetryczne logo"],
-          },
-          {
-            id: "side-views",
-            name: "Widoki z boku",
-            images: ["/placeholder.svg?height=400&width=400", "/placeholder.svg?height=400&width=400"],
-            analysis: {
-              overallScore: 7.8,
-              lighting: 8.0,
-              clarity: 7.5,
-              angles: 8.5,
-              details: 7.5,
-            },
-            recommendations: ["Lepsze oświetlenie", "Ostrzejsze zdjęcia"],
-            flaws: ["Rozmyte detale", "Za ciemne zdjęcie"],
-          },
-          {
-            id: "sole-views",
-            name: "Podeszwa",
-            images: [
-              "/placeholder.svg?height=400&width=400",
-              "/placeholder.svg?height=400&width=400",
-              "/placeholder.svg?height=400&width=400",
-              "/placeholder.svg?height=400&width=400",
-            ],
-            analysis: {
-              overallScore: 9.2,
-              lighting: 9.5,
-              clarity: 9.0,
-              angles: 9.0,
-              details: 9.2,
-            },
-            recommendations: ["Doskonałe zdjęcia podeszwy"],
-            flaws: ["Brak znaczących wad"],
-          },
-        ],
-        overallScore: 8.5,
-        totalImages: 9,
-      }
-      setResult(mockResult)
-      setIsAnalyzing(false)
-    }, 3000)
-  }
-
-  const getScoreColor = (score: number) => {
-    if (score >= 8.5) return "text-green-400"
-    if (score >= 7.0) return "text-yellow-400"
-    return "text-red-400"
-  }
-
-  const getScoreBackground = (score: number) => {
-    if (score >= 8.5) return "bg-green-400/20 border-green-400/30"
-    if (score >= 7.0) return "bg-yellow-400/20 border-yellow-400/30"
-    return "bg-red-400/20 border-red-400/30"
-  }
+            body: JSON.stringify({ url }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Wystąpił nieznany błąd");
+        }
+        setQcGroups(data);
+    } catch (err) {
+        setError((err as Error).message);
+    } finally {
+        setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
-      {/* Input Section */}
-      <div className="glass-morphism rounded-2xl p-8">
-        <h2 className="text-xl font-semibold text-white mb-6">Wklej link do zdjęć QC</h2>
+      <AnimatePresence>
+        {selectedGroup && <QcGalleryModal group={selectedGroup} onClose={() => setSelectedGroup(null)} />}
+      </AnimatePresence>
 
-        <div className="space-y-4">
-          <div className="relative">
+      <div className="glass-morphism rounded-2xl p-8">
+        <h2 className="text-xl font-semibold text-white mb-6">Wklej link do produktu (Taobao, Weidian, 1688)</h2>
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+          <div className="relative w-full">
             <Link2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
             <input
               type="url"
-              value={qcLink}
-              onChange={(e) => setQcLink(e.target.value)}
-              placeholder="https://imgur.com/a/abc123 lub https://drive.google.com/..."
-              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://item.taobao.com/item.htm?id=..."
+              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
-
-          <div className="text-sm text-white/60">
-            <p className="mb-2">Obsługiwane platformy:</p>
-            <div className="flex flex-wrap gap-2">
-              {["Imgur", "Google Drive", "Dropbox", "WeChat", "Yupoo", "Szwego"].map((platform) => (
-                <span key={platform} className="px-2 py-1 bg-white/10 rounded text-xs">
-                  {platform}
-                </span>
-              ))}
-            </div>
-          </div>
-
           <Button
-            onClick={analyzeQC}
-            disabled={!qcLink.trim() || isAnalyzing}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
+            onClick={handleFetchQc}
+            disabled={!url.trim() || isLoading}
+            className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-emerald-400 hover:from-emerald-700 hover:to-emerald-500 px-6 py-3 text-base h-auto"
           >
-            {isAnalyzing ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                Analizuję QC...
-              </>
-            ) : (
-              <>
-                <Search className="w-4 h-4 mr-2" />
-                Analizuj QC
-              </>
-            )}
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+            <span className="ml-2">Szukaj QC</span>
           </Button>
         </div>
       </div>
 
-      {/* Results */}
-      {result && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          {/* Overall Score */}
-          <div className="glass-morphism rounded-2xl p-8 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">Wynik Analizy QC</h2>
-            <div className={`text-6xl font-bold mb-2 ${getScoreColor(result.overallScore)}`}>
-              {result.overallScore}/10
-            </div>
-            <div className="flex items-center justify-center space-x-1 mb-4">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`w-6 h-6 ${
-                    i < Math.floor(result.overallScore / 2) ? "text-yellow-400 fill-current" : "text-gray-600"
-                  }`}
-                />
-              ))}
-            </div>
-            <p className="text-white/70 mb-4">
-              Przeanalizowano {result.totalImages} zdjęć w {result.groups.length} grupach
-            </p>
-          </div>
-
-          {/* Groups */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {result.groups.map((group) => (
-              <motion.div
-                key={group.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className={`glass-morphism rounded-2xl p-6 cursor-pointer transition-all duration-300 ${
-                  selectedGroup === group.id ? "ring-2 ring-blue-400" : "hover:bg-white/10"
-                }`}
-                onClick={() => setSelectedGroup(selectedGroup === group.id ? null : group.id)}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-white">{group.name}</h3>
-                  <div
-                    className={`px-2 py-1 rounded text-sm font-medium ${getScoreBackground(group.analysis.overallScore)}`}
-                  >
-                    {group.analysis.overallScore}/10
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  {group.images.slice(0, 4).map((image, index) => (
-                    <div key={index} className="aspect-square bg-white/5 rounded-lg overflow-hidden">
-                      <img
-                        src={image || "/placeholder.svg"}
-                        alt={`${group.name} ${index + 1}`}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <div className="text-sm text-white/60 mb-3">
-                  {group.images.length} zdjęć • {group.flaws.length} wad
-                </div>
-
-                <Button size="sm" variant="ghost" className="w-full text-white/60 hover:text-white hover:bg-white/10">
-                  <Eye className="w-4 h-4 mr-2" />
-                  {selectedGroup === group.id ? "Zwiń szczegóły" : "Zobacz szczegóły"}
-                </Button>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Detailed View */}
-          {selectedGroup && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              className="glass-morphism rounded-2xl p-8"
-            >
-              {(() => {
-                const group = result.groups.find((g) => g.id === selectedGroup)!
-                return (
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-2xl font-bold text-white">{group.name}</h3>
-                      <Button
-                        onClick={() => setSelectedGroup(null)}
-                        variant="ghost"
-                        className="text-white/60 hover:text-white"
-                      >
-                        Zamknij
-                      </Button>
-                    </div>
-
-                    {/* Images Gallery */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="aspect-square bg-white/5 rounded-xl overflow-hidden">
-                          <img
-                            src={group.images[selectedImage] || "/placeholder.svg"}
-                            alt={`${group.name} ${selectedImage + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 gap-2">
-                          {group.images.map((image, index) => (
-                            <button
-                              key={index}
-                              onClick={() => setSelectedImage(index)}
-                              className={`aspect-square rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                                selectedImage === index ? "border-blue-400" : "border-white/10 hover:border-white/30"
-                              }`}
-                            >
-                              <img
-                                src={image || "/placeholder.svg"}
-                                alt={`${group.name} ${index + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-6">
-                        {/* Scores */}
-                        <div>
-                          <h4 className="text-lg font-semibold text-white mb-4">Oceny szczegółowe</h4>
-                          <div className="space-y-3">
-                            {Object.entries(group.analysis)
-                              .filter(([key]) => key !== "overallScore")
-                              .map(([key, score]) => (
-                                <div key={key} className="space-y-1">
-                                  <div className="flex justify-between">
-                                    <span className="text-white/80 capitalize">
-                                      {key === "lighting"
-                                        ? "Oświetlenie"
-                                        : key === "clarity"
-                                          ? "Ostrość"
-                                          : key === "angles"
-                                            ? "Kąty"
-                                            : "Detale"}
-                                    </span>
-                                    <span className={`font-bold ${getScoreColor(score)}`}>{score}/10</span>
-                                  </div>
-                                  <div className="w-full bg-white/10 rounded-full h-2">
-                                    <div
-                                      className={`h-2 rounded-full ${
-                                        score >= 8.5 ? "bg-green-400" : score >= 7.0 ? "bg-yellow-400" : "bg-red-400"
-                                      }`}
-                                      style={{ width: `${score * 10}%` }}
-                                    />
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-
-                        {/* Recommendations & Flaws */}
-                        <div className="grid grid-cols-1 gap-4">
-                          <div>
-                            <h4 className="text-white font-medium mb-2 flex items-center">
-                              <Check className="w-4 h-4 text-green-400 mr-2" />
-                              Rekomendacje
-                            </h4>
-                            <ul className="space-y-1">
-                              {group.recommendations.map((rec, index) => (
-                                <li key={index} className="text-white/70 text-sm flex items-start">
-                                  <span className="text-blue-400 mr-2">•</span>
-                                  {rec}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h4 className="text-white font-medium mb-2 flex items-center">
-                              <AlertTriangle className="w-4 h-4 text-yellow-400 mr-2" />
-                              Zauważone wady
-                            </h4>
-                            <ul className="space-y-1">
-                              {group.flaws.map((flaw, index) => (
-                                <li key={index} className="text-white/70 text-sm flex items-start">
-                                  <span className="text-yellow-400 mr-2">•</span>
-                                  {flaw}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })()}
-            </motion.div>
-          )}
-
-          {/* Actions */}
-          <div className="flex justify-center space-x-4">
-            <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 bg-transparent">
-              <Download className="w-4 h-4 mr-2" />
-              Pobierz Raport
-            </Button>
-            <Button
-              onClick={() => {
-                setResult(null)
-                setQcLink("")
-                setSelectedGroup(null)
-              }}
-              className="bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
-            >
-              Nowa Analiza
-            </Button>
-          </div>
+      {error && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-lg flex items-center gap-3">
+          <AlertCircle className="w-5 h-5" />
+          <span>{error}</span>
         </motion.div>
       )}
+
+      {qcGroups.length > 0 && (
+          <div className="space-y-6">
+            <h3 className="text-xl font-semibold text-white">Znaleziono {qcGroups.length} grup zdjęć QC:</h3>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {qcGroups.map((group, index) => (
+                    <motion.div
+                        key={group.order_no}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="glass-morphism rounded-2xl overflow-hidden hover:bg-white/10 transition-colors duration-300 group cursor-pointer"
+                        onClick={() => setSelectedGroup(group)}
+                    >
+                        <div className="relative aspect-square">
+                            <Image
+                                src={group.image_list[0]}
+                                alt={`QC for order ${group.order_no}`}
+                                layout="fill"
+                                objectFit="cover"
+                                className="group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                            <div className="absolute bottom-4 left-4 text-white">
+                                <p className="font-semibold">{group.order_no.replace(/\*\*\*\*/, '...')}</p>
+                                <p className="text-sm text-white/70 flex items-center gap-1.5">
+                                    <ImageIcon className="w-4 h-4" />
+                                    {group.image_list.length} zdjęć
+                                </p>
+                            </div>
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+          </div>
+      )}
     </div>
-  )
+  );
 }

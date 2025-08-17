@@ -11,14 +11,14 @@ const stats = [
     value: 15000,
     label: "Aktywnych Członków",
     suffix: "+",
-    color: "text-blue-400",
+    color: "text-emerald-400",
   },
   {
     icon: Package,
     value: 3500,
     label: "Zweryfikowanych Batchy",
     suffix: "+",
-    color: "text-blue-500",
+    color: "text-emerald-500",
   },
   {
     icon: Star,
@@ -33,34 +33,35 @@ const stats = [
     value: 98,
     label: "Wskaźnik Sukcesu",
     suffix: "%",
-    color: "text-blue-400",
+    color: "text-emerald-400",
   },
   {
     icon: Shield,
     value: 24,
     label: "Godzinne Wsparcie",
     suffix: "/7",
-    color: "text-blue-600",
+    color: "text-emerald-600",
   },
   {
     icon: Globe,
     value: 50,
     label: "Krajów Obsługiwanych",
     suffix: "+",
-    color: "text-blue-500",
+    color: "text-emerald-500",
   },
 ]
 
 export function StatsSection() {
   const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, threshold: 0.3 })
+  // ZMIANA TUTAJ - usunięto 'threshold'
+  const isInView = useInView(ref, { once: true })
 
   return (
     <section ref={ref} className="py-20 relative overflow-hidden">
       {/* Background elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-0 left-1/3 w-72 h-72 bg-blue-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/3 w-96 h-96 bg-blue-400/5 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-1/3 w-72 h-72 bg-emerald-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/3 w-96 h-96 bg-emerald-400/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -74,7 +75,7 @@ export function StatsSection() {
             Zaufana przez <span className="gradient-text">społeczność</span>
           </h2>
           <p className="text-lg text-white/70 max-w-3xl mx-auto">
-            Dołącz do tysięcy zadowolonych członków, którzy ufają RepMafia w swoich potrzebach związanych z replikami.
+            Dołącz do tysięcy zadowolonych członków, którzy ufają XaffReps w swoich potrzebach związanych z replikami.
             Nasza platforma zapewnia jakość, niezawodność i wyjątkową obsługę.
           </p>
         </motion.div>
@@ -90,7 +91,7 @@ export function StatsSection() {
             >
               <div className="glass-morphism rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 group-hover:scale-105">
                 <div
-                  className={`inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r from-blue-600/20 to-blue-400/20 mb-4 group-hover:scale-110 transition-transform duration-300`}
+                  className={`inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r from-emerald-600/20 to-emerald-400/20 mb-4 group-hover:scale-110 transition-transform duration-300`}
                 >
                   <stat.icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
