@@ -6,7 +6,7 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      // Dodajemy rolę 'user' do typu
+      // ZMIANA: Dodajemy 'user' jako możliwą rolę
       role: "root" | "admin" | "adder" | "user";
       name?: string | null;
       email?: string | null;
@@ -17,7 +17,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    // Dodajemy rolę 'user' do typu
+    // ZMIANA: Dodajemy 'user' jako możliwą rolę
     role: "root" | "admin" | "adder" | "user";
   }
 }

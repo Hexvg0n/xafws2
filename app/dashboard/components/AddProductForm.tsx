@@ -1,3 +1,5 @@
+// app/dashboard/components/AddProductForm.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -39,35 +41,40 @@ export function AddProductForm({ onSave, onCancel }: { onSave: () => void; onCan
       setError("Nazwa produktu oraz link źródłowy są wymagane.");
       return;
     }
-    if (!imageFile && !imageUrl) {
-      setError("Zdjęcie główne (z pliku lub URL) jest wymagane.");
-      return;
-    }
-
+    
     setIsProcessing(true);
     setError(null);
 
     try {
-      const formData = new FormData();
-      if (imageFile) {
-        formData.append('file', imageFile);
-      } else if (imageUrl) {
-        formData.append('imageUrl', imageUrl);
+      let finalThumbnailUrl = "";
+
+      // Jeśli dodano zdjęcie, najpierw je przesyłamy
+      if (imageFile || imageUrl) {
+          const formData = new FormData();
+          if (imageFile) {
+            formData.append('file', imageFile);
+          } else if (imageUrl) {
+            formData.append('imageUrl', imageUrl);
+          }
+    
+          const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+    
+          const uploadResult = await uploadResponse.json();
+          if (!uploadResponse.ok) {
+            throw new Error(uploadResult.error || "Błąd przesyłania zdjęcia.");
+          }
+          finalThumbnailUrl = uploadResult.thumbnailUrl;
       }
 
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const uploadResult = await uploadResponse.json();
-      if (!uploadResponse.ok) {
-        throw new Error(uploadResult.error || "Błąd przesyłania zdjęcia.");
-      }
-      
-      const { thumbnailUrl } = uploadResult;
-
-      const productData = { name, sourceUrl, thumbnailUrl };
+      // Następnie wysyłamy wszystkie dane do naszego głównego endpointu
+      const productData = { 
+          name, 
+          sourceUrl, 
+          thumbnailUrl: finalThumbnailUrl 
+      };
 
       const productResponse = await fetch('/api/products', {
         method: 'POST',
@@ -96,7 +103,7 @@ export function AddProductForm({ onSave, onCancel }: { onSave: () => void; onCan
       <DialogContent className="max-w-lg glass-morphism border-white/10 text-white">
         <DialogHeader>
           <DialogTitle>Dodaj Nowy Produkt</DialogTitle>
-          <DialogDescription>Wypełnij dane, dodaj zdjęcie główne i link. Reszta danych zostanie pobrana automatycznie.</DialogDescription>
+          <DialogDescription>Wypełnij dane, dodaj zdjęcie główne i link. Reszta danych zostanie pobrana automatycznie w tle.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-4">
           <div>
@@ -108,7 +115,7 @@ export function AddProductForm({ onSave, onCancel }: { onSave: () => void; onCan
             <Input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="Wklej link..." className="bg-white/5 border-white/10"/>
           </div>
           <div>
-             <label className="block text-sm font-medium text-white/80 mb-2">Zdjęcie główne *</label>
+             <label className="block text-sm font-medium text-white/80 mb-2">Zdjęcie główne</label>
              <Tabs defaultValue="upload" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="upload">Prześlij plik</TabsTrigger>

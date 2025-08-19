@@ -1,13 +1,16 @@
+// components/sellers/sellers-content.tsx
+
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
 import { Search, Loader2 } from "lucide-react"
 import { SellerCard } from "./seller-card"
-import type { ISeller } from "@/models/Seller";
+import { type Seller } from "@/lib/types"; // <-- ZMIANA: Importujemy nowy, prosty typ
 
 export function SellersContent() {
-  const [sellers, setSellers] = useState<ISeller[]>([]);
+  // ZMIANA: Używamy nowego typu w stanie
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -16,7 +19,8 @@ export function SellersContent() {
       try {
           const res = await fetch('/api/sellers');
           if (!res.ok) throw new Error("Błąd pobierania sprzedawców");
-          setSellers(await res.json());
+          // Rzutujemy odpowiedź na nasz nowy, bezpieczny typ
+          setSellers(await res.json() as Seller[]);
       } catch (error) { console.error(error); }
       finally { setIsLoading(false); }
   }, []);
@@ -48,8 +52,9 @@ export function SellersContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredSellers.map((seller, index) => (
+          // Teraz TypeScript wie, że `seller._id` to string
           <motion.div
-            key={seller.id.toString()}
+            key={seller._id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}

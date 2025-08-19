@@ -1,8 +1,39 @@
+// app/api/products/route.ts
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import ProductModel from '@/models/Product';
+import axios from 'axios';
+
+// Funkcja pomocnicza do parsowania URL
+const parseProductLink = (url: string): { platform: string; itemID: string } | null => {
+    try {
+        const urlObj = new URL(url);
+        let platform = '';
+        let itemID = '';
+
+        if (urlObj.hostname.includes('taobao')) {
+            platform = 'taobao';
+            itemID = urlObj.searchParams.get('id') || '';
+        } else if (urlObj.hostname.includes('weidian')) {
+            platform = 'weidian';
+            itemID = urlObj.searchParams.get('itemID') || '';
+        } else if (urlObj.hostname.includes('1688')) {
+            platform = '1688';
+            const match = urlObj.pathname.match(/offer\/(\d+)\.html/);
+            if (match) itemID = match[1];
+        }
+
+        if (platform && itemID) {
+            return { platform, itemID };
+        }
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
 
 // --- FUNKCJA POST (TWORZENIE NOWEGO PRODUKTU) ---
 export async function POST(req: Request) {
@@ -12,26 +43,73 @@ export async function POST(req: Request) {
     }
 
     try {
-        const body = await req.json();
-        const { name, sourceUrl, shopInfo } = body;
+        const manualData = await req.json();
+        const { name, sourceUrl, thumbnailUrl } = manualData;
 
         if (!name || !sourceUrl) {
             return NextResponse.json({ error: 'Nazwa i link do produktu są wymagane.' }, { status: 400 });
         }
 
+        let apiDataToSave = {};
+        try {
+            const parsedLink = parseProductLink(sourceUrl);
+            if (!parsedLink) {
+                throw new Error("Nie udało się zidentyfikować platformy lub ID produktu z podanego linku.");
+            }
+
+            // --- ZMIANA: Używamy poprawnego API RepMafia ---
+            const apiUrl = `https://api.repmafia.net/preview?url=${parsedLink.platform}/${parsedLink.itemID}`;
+            const apiResponse = await axios.get(apiUrl);
+            
+            if (apiResponse.status === 200 && apiResponse.data.ItemID) {
+                const apiResult = apiResponse.data;
+                
+                const colors = new Set<string>();
+                const sizes = new Set<string>();
+                
+                if (apiResult.Skus && Array.isArray(apiResult.Skus)) {
+                    apiResult.Skus.forEach((sku: any) => {
+                        if (sku.Properties && Array.isArray(sku.Properties)) {
+                            sku.Properties.forEach((prop: { Name: string; Value: string }) => {
+                                if (prop.Name.toLowerCase().includes('color')) {
+                                    colors.add(prop.Value.trim());
+                                } else if (prop.Name.toLowerCase().includes('size')) {
+                                    sizes.add(prop.Value.trim());
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                apiDataToSave = {
+                    platform: apiResult.Platform,
+                    mainImages: apiResult.Images || [],
+                    description: apiResult.Description,
+                    priceCNY: apiResult.Price,
+                    shopInfo: apiResult.ShopInfo,
+                    dimensions: apiResult.Dimensions,
+                    skus: apiResult.Skus || [],
+                    availableColors: Array.from(colors),
+                    availableSizes: Array.from(sizes),
+                };
+            }
+        } catch (apiError) {
+            console.warn("Nie udało się pobrać dodatkowych danych z API, produkt zostanie zapisany z danymi podstawowymi.", apiError);
+        }
+
         await dbConnect();
+        
         const newProduct = await ProductModel.create({
+            ...apiDataToSave,
             name,
             sourceUrl,
-            shopInfo,
+            thumbnailUrl,
             createdBy: session.user.id,
-            // W przyszłości można tu dodać więcej pól z body
         });
 
         return NextResponse.json(newProduct, { status: 201 });
 
     } catch (error) {
-        // Sprawdzanie, czy błąd to duplikat klucza (unikalny sourceUrl)
         if (error instanceof Error && 'code' in error && (error as any).code === 11000) {
             return NextResponse.json({ error: 'Produkt z tym linkiem już istnieje w bazie.' }, { status: 409 });
         }
@@ -42,7 +120,7 @@ export async function POST(req: Request) {
     }
 }
 
-// --- FUNKCJA GET (POBIERANIE LISTY PRODUKTÓW) ---
+// --- FUNKCJA GET (bez zmian) ---
 export async function GET() {
     try {
         await dbConnect();

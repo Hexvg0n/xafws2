@@ -11,8 +11,9 @@ export async function GET() {
     await dbConnect();
     try {
         const settings = await SettingsModel.findOne({ key: 'discordRoles' });
+        // Zwróć puste stringi, jeśli ustawienia jeszcze nie istnieją
         if (!settings) {
-            return NextResponse.json({ adminRoleId: '', adderRoleId: '' }, { status: 200 });
+            return NextResponse.json({ rootRoleId: '', adminRoleId: '', adderRoleId: '' }, { status: 200 });
         }
         return NextResponse.json(settings, { status: 200 });
     } catch (error) {
@@ -20,10 +21,11 @@ export async function GET() {
     }
 }
 
+// POST - Zapisywanie/aktualizacja ustawień
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     if (session?.user?.role !== 'root') {
-        return NextResponse.json({ error: 'Brak uprawnień.' }, { status: 403 });
+        return NextResponse.json({ error: 'Brak uprawnień. Tylko root może zmieniać te ustawienia.' }, { status: 403 });
     }
 
     try {

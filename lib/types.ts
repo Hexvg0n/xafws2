@@ -15,7 +15,7 @@ export type Product = {
   name: string;
   sourceUrl: string;
   thumbnailUrl?: string;
-  platform: string;
+  //platform: string;
   mainImages: string[];
   descriptionImages: string[];
   priceCNY: number;
@@ -30,5 +30,14 @@ export type Product = {
   favorites?: number;
 };
 
+export type Seller = {
+  _id: string;
+  name: string;
+  image: string;
+  link: string;
+  rating: number;
+  description: string;
+  clicks: number;
+};
 
-export type AdminTab = "stats" | "products" | "user-management" | "user-approval" | "promos" | "sellers" | "batches";
+export type AdminTab = "stats" | "products" | "user-management" | "user-approval" | "promos" | "sellers" | "batches" | "role-management";

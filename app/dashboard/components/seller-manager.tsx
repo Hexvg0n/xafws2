@@ -1,17 +1,21 @@
-"use client"
+// app/dashboard/components/seller-manager.tsx
+
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Edit, Trash2, Loader2, Star } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Loader2, Star, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SellerForm } from "./seller-form";
-import type { ISeller } from "@/models/Seller";
+import { type Seller } from "@/lib/types"; // <-- ZMIANA: Importujemy nowy, prosty typ
+import Link from 'next/link';
 
 export function SellerManager() {
-    const [sellers, setSellers] = useState<ISeller[]>([]);
+    // ZMIANA: Używamy nowego typu w stanie
+    const [sellers, setSellers] = useState<Seller[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
-    const [editingSeller, setEditingSeller] = useState<ISeller | null>(null);
+    const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
 
     const fetchSellers = useCallback(async () => {
@@ -19,14 +23,15 @@ export function SellerManager() {
         try {
             const res = await fetch('/api/sellers');
             if (!res.ok) throw new Error("Błąd pobierania sprzedawców");
-            setSellers(await res.json());
+            // Rzutujemy odpowiedź na nasz nowy, bezpieczny typ
+            setSellers(await res.json() as Seller[]);
         } catch (error) { console.error(error); setSellers([]); }
         finally { setIsLoading(false); }
     }, []);
 
     useEffect(() => { fetchSellers(); }, [fetchSellers]);
 
-    const handleSave = async (sellerData: Partial<ISeller>) => {
+    const handleSave = async (sellerData: Partial<Seller>) => {
         const method = editingSeller ? 'PATCH' : 'POST';
         const url = editingSeller ? `/api/sellers/${editingSeller._id}` : '/api/sellers';
         try {
@@ -35,11 +40,16 @@ export function SellerManager() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(sellerData),
             });
-            if (!response.ok) throw new Error('Błąd zapisu sprzedawcy');
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Błąd zapisu sprzedawcy');
+            }
             setShowForm(false);
             setEditingSeller(null);
             fetchSellers();
-        } catch (error) { alert('Nie udało się zapisać sprzedawcy.'); }
+        } catch (error) {
+            alert((error as Error).message);
+        }
     };
 
     const handleDelete = async (id: string) => {
@@ -52,7 +62,7 @@ export function SellerManager() {
     };
 
     const filteredSellers = sellers.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+
     if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-blue-400" /></div>;
 
     return (
@@ -74,7 +84,8 @@ export function SellerManager() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredSellers.map((seller) => (
-                    <motion.div key={seller.id.toString()} className="glass-morphism rounded-2xl p-6">
+                    // Teraz TypeScript wie, że seller._id to string - nie potrzeba .toString()
+                    <motion.div key={seller._id} className="glass-morphism rounded-2xl p-6 flex flex-col">
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center space-x-3">
                                 <img src={seller.image || '/placeholder.svg'} alt={seller.name} className="w-12 h-12 rounded-full object-cover" />
@@ -85,11 +96,16 @@ export function SellerManager() {
                             </div>
                             <div className="flex items-center space-x-1">
                                 <Button size="sm" variant="ghost" onClick={() => { setEditingSeller(seller); setShowForm(true); }}><Edit className="w-4 h-4" /></Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleDelete(seller.id.toString())}><Trash2 className="w-4 h-4 text-red-500" /></Button>
+                                <Button size="sm" variant="ghost" onClick={() => handleDelete(seller._id)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
                             </div>
                         </div>
-                        <p className="text-sm text-white/70">{seller.description}</p>
-                        <p className="text-xs text-white/50 mt-4">Kliknięcia: {seller.clicks}</p>
+                        <p className="text-sm text-white/70 flex-grow">{seller.description}</p>
+                        <div className="border-t border-white/10 pt-4 mt-4">
+                            <Link href={seller.link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-2">
+                                <LinkIcon className="w-4 h-4" />
+                                <span>Przejdź do sklepu</span>
+                            </Link>
+                        </div>
                     </motion.div>
                 ))}
             </div>

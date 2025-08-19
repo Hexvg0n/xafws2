@@ -1,6 +1,6 @@
 // models/User.ts
 
-import mongoose from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 const UserSchema = new mongoose.Schema({
   nickname: {
@@ -20,11 +20,10 @@ const UserSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: {
-        // Dodajemy nową rolę 'user'
         values: ['root', 'admin', 'adder', 'user'],
         message: 'Rola `{VALUE}` nie jest wspierana.'
     },
-    default: 'user', // 'user' jest teraz domyślną rolą
+    default: 'user',
   },
   status: {
     type: String,
@@ -35,9 +34,10 @@ const UserSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   },
-}, {
-  timestamps: true,
-});
+  wishlist: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
+  preferredAgent: { type: String, default: 'ACBUY' },
+  preferredCurrency: { type: String, default: 'PLN' },
+}, { timestamps: true });
 
 UserSchema.index({ nickname: 1 }, { unique: true, partialFilterExpression: { email: { $exists: false } } });
 

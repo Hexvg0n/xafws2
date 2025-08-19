@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import UserModel from '@/models/User';
+import '@/models/Product'; // Ważny import, aby populate działało poprawnie
 
 // Handler do pobierania danych profilu
 export async function GET() {
@@ -15,9 +16,10 @@ export async function GET() {
 
     try {
         await dbConnect();
+        // ZMIANA: Wybieramy 'preferredCurrency' zamiast 'currency'
         const user = await UserModel.findById(session.user.id)
-            .select('nickname email avatar wishlist preferredAgent currency') // Wybieramy tylko potrzebne pola
-            .populate('wishlist'); // Dołączamy pełne dane produktów z wishlisty
+            .select('nickname email avatar wishlist preferredAgent preferredCurrency')
+            .populate('wishlist');
 
         if (!user) {
             return NextResponse.json({ error: 'Nie znaleziono użytkownika' }, { status: 404 });
@@ -39,13 +41,15 @@ export async function PATCH(req: Request) {
 
     try {
         const body = await req.json();
-        const { preferredAgent, currency } = body;
+        // ZMIANA: Oczekujemy 'preferredCurrency' zamiast 'currency'
+        const { preferredAgent, preferredCurrency } = body;
 
         await dbConnect();
         
         const updatedUser = await UserModel.findByIdAndUpdate(
             session.user.id,
-            { preferredAgent, currency },
+            // ZMIANA: Zapisujemy pod poprawną nazwą 'preferredCurrency'
+            { preferredAgent, preferredCurrency },
             { new: true, runValidators: true }
         );
 

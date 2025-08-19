@@ -1,4 +1,4 @@
-// app/api/qc/route.ts
+// app/api/qc/route.ts (teraz służy do pobierania danych produktu)
 
 import { NextResponse } from 'next/server';
 import axios from 'axios';
@@ -10,22 +10,23 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'URL jest wymagany.' }, { status: 400 });
         }
 
+        // Zmieniamy URL na ten do pobierania danych produktu
         const encodedUrl = encodeURIComponent(url);
-        const apiResponse = await axios.get(`https://dev.vectoreps.pl/api/api/qc?url=${encodedUrl}`);
+        const apiResponse = await axios.get(`https://dev.vectoreps.pl/api/api/link-parser?url=${encodedUrl}`);
         
         const data = apiResponse.data;
 
-        if (!data.success || !data.cnfans || data.cnfans.cnfans !== "sukces") {
-            // Próbujemy znaleźć bardziej szczegółowy błąd, jeśli istnieje
-            const errorMessage = data.error || data.cnfans?.qc_data?.msg || "Nie znaleziono zdjęć QC dla tego linku.";
+        // Sprawdzamy, czy odpowiedź z API jest poprawna
+        if (apiResponse.status !== 200 || !data.ItemID) {
+            const errorMessage = data.error || "Nie udało się pobrać danych dla tego linku.";
             return NextResponse.json({ error: errorMessage }, { status: 404 });
         }
 
-        // Zwracamy tylko te dane, które są nam potrzebne
-        return NextResponse.json(data.cnfans.qc_data.data, { status: 200 });
+        // Zwracamy wszystkie pobrane dane
+        return NextResponse.json(data, { status: 200 });
 
     } catch (error) {
-        console.error("Błąd w API /api/qc:", error);
+        console.error("Błąd w API /api/qc (product-data):", error);
         return NextResponse.json({ error: 'Wystąpił wewnętrzny błąd serwera.' }, { status: 500 });
     }
 }
