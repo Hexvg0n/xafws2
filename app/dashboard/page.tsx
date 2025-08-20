@@ -10,7 +10,6 @@ import {
   BarChart3, Package, Tag, Shield, Star, KeyRound, Tags
 } from "lucide-react";
 import { ProductManagerView } from "./components/ProductManagerView";
-import { PromoManager } from "./components/promo-manager";
 import { SellerManager } from "./components/seller-manager";
 import { RoleManager } from "./components/RoleManager";
 import { CategoryManager } from "./components/CategoryManager";
