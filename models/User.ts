@@ -35,6 +35,7 @@ const UserSchema = new mongoose.Schema({
     ref: 'User',
   },
   wishlist: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
+  batchWishlist: [{ type: Schema.Types.ObjectId, ref: 'Batch' }], // <<< UPEWNIJ SIĘ, ŻE TA LINIA ISTNIEJE
   preferredAgent: { type: String, default: 'ACBUY' },
   preferredCurrency: { type: String, default: 'PLN' },
 }, { timestamps: true });

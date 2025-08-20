@@ -6,7 +6,7 @@ import { authOptions } from '../auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import BatchModel from '@/models/Batch';
 import axios from 'axios';
-
+import { logHistory } from '@/lib/historyLogger';
 // Funkcja pomocnicza do parsowania URL
 const parseProductLink = (url: string): { platform: string; itemID: string } | null => {
     try {
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
             batch,
             createdBy: session.user.id,
         });
-
+        await logHistory(session, 'add', 'batch', newBatch._id.toString(), `dodał batch "${newBatch.name} - ${newBatch.batch}"`);
         return NextResponse.json(newBatch, { status: 201 });
 
     } catch (error) {

@@ -8,52 +8,16 @@ import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Info, Loader2, Trash2 } from "lucide-react";
+import { useWishlist } from "../context/WishlistProvider"; // <<< DODANY IMPORT
 
 export default function FavoritesTab() {
-  const [favorites, setFavorites] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { wishlist, toggleFavorite, isLoading } = useWishlist(); // <<< ZMIENIONA LINIA
 
-  const fetchFavorites = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/profile');
-      if (res.ok) {
-        const data = await res.json();
-        setFavorites(data.wishlist || []);
-      }
-    } catch (error) {
-      console.error(error);
-      setFavorites([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const allFavorites = [...(wishlist.products || []), ...(wishlist.batches || [])];
 
-  useEffect(() => {
-    fetchFavorites();
-  }, []);
-
-  const handleRemoveFavorite = async (productId: string) => {
-    const originalFavorites = [...favorites];
-    setFavorites(prev => prev.filter(p => p._id !== productId));
-
-    try {
-      await Promise.all([
-        fetch('/api/profile/wishlist', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId }),
-        }),
-        fetch('/api/stats/track', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'productUnfavorite', id: productId }),
-        })
-      ]);
-    } catch (error) {
-      alert("Wystąpił błąd. Odśwież stronę.");
-      setFavorites(originalFavorites);
-    }
+  const handleRemoveFavorite = async (item: any) => {
+    const itemType = item.batch ? 'batch' : 'product';
+    await toggleFavorite(item, itemType);
   };
 
   if (isLoading) {
@@ -63,26 +27,26 @@ export default function FavoritesTab() {
   return (
     <Card className="bg-white/5 border-white/10 text-white">
       <CardHeader>
-        <CardTitle>Twoje Polubione Przedmioty ({favorites.length})</CardTitle>
+        <CardTitle>Twoje Polubione Przedmioty ({allFavorites.length})</CardTitle>
       </CardHeader>
       <CardContent>
-        {favorites.length > 0 ? (
+        {allFavorites.length > 0 ? (
           <div className="space-y-4">
-            {favorites.map(product => (
-              <div key={product._id} className="flex items-center gap-4 glass-morphism p-4 rounded-lg">
-                <Link href={`/w2c/${product._id}`}>
-                  <Image src={product.thumbnailUrl || '/placeholder.svg'} alt={product.name} width={64} height={64} className="w-16 h-16 rounded-md object-cover"/>
+            {allFavorites.map(item => (
+              <div key={item._id} className="flex items-center gap-4 glass-morphism p-4 rounded-lg">
+                <Link href={item.batch ? `/bb/${item._id}` : `/w2c/${item._id}`}>
+                  <Image src={item.thumbnailUrl || '/placeholder.svg'} alt={item.name} width={64} height={64} className="w-16 h-16 rounded-md object-cover"/>
                 </Link>
                 <div className="flex-grow">
-                  <Link href={`/w2c/${product._id}`}>
-                    <p className="font-semibold hover:text-emerald-400 transition-colors">{product.name}</p>
+                  <Link href={item.batch ? `/bb/${item._id}` : `/w2c/${item._id}`}>
+                    <p className="font-semibold hover:text-emerald-400 transition-colors">{item.name}</p>
                   </Link>
-                  <p className="text-sm text-white/60">{product.shopInfo?.ShopName || 'Brak sprzedawcy'}</p>
+                  <p className="text-sm text-white/60">{item.shopInfo?.ShopName || 'Brak sprzedawcy'}</p>
                 </div>
                 <div className="text-right">
-                    <p className="font-bold text-emerald-400">{product.priceCNY} ¥</p>
+                    <p className="font-bold text-emerald-400">{item.priceCNY} ¥</p>
                 </div>
-                <Button onClick={() => handleRemoveFavorite(product._id)} variant="ghost" size="sm" className="text-red-500/70 hover:text-red-500 hover:bg-red-500/10">
+                <Button onClick={() => handleRemoveFavorite(item)} variant="ghost" size="sm" className="text-red-500/70 hover:text-red-500 hover:bg-red-500/10">
                     <Trash2 className="w-4 h-4" />
                 </Button>
               </div>

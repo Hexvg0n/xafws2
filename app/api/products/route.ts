@@ -6,8 +6,9 @@ import { authOptions } from '../auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import ProductModel from '@/models/Product';
 import axios from 'axios';
+import { logHistory } from '@/lib/historyLogger'; // <<< Nowy import
 
-// Funkcja pomocnicza do parsowania URL
+// Funkcja pomocnicza do parsowania URL (bez zmian)
 const parseProductLink = (url: string): { platform: string; itemID: string } | null => {
     try {
         const urlObj = new URL(url);
@@ -38,7 +39,7 @@ const parseProductLink = (url: string): { platform: string; itemID: string } | n
 // --- FUNKCJA POST (TWORZENIE NOWEGO PRODUKTU) ---
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !session.user.name) { // Dodano sprawdzenie session.user.name
         return NextResponse.json({ error: 'Brak autoryzacji' }, { status: 401 });
     }
 
@@ -53,45 +54,42 @@ export async function POST(req: Request) {
         let apiDataToSave = {};
         try {
             const parsedLink = parseProductLink(sourceUrl);
-            if (!parsedLink) {
-                throw new Error("Nie udało się zidentyfikować platformy lub ID produktu z podanego linku.");
-            }
-
-            // --- ZMIANA: Używamy poprawnego API RepMafia ---
-            const apiUrl = `https://api.repmafia.net/preview?url=${parsedLink.platform}/${parsedLink.itemID}`;
-            const apiResponse = await axios.get(apiUrl);
-            
-            if (apiResponse.status === 200 && apiResponse.data.ItemID) {
-                const apiResult = apiResponse.data;
+            if (parsedLink) {
+                const apiUrl = `https://api.repmafia.net/preview?url=${parsedLink.platform}/${parsedLink.itemID}`;
+                const apiResponse = await axios.get(apiUrl);
                 
-                const colors = new Set<string>();
-                const sizes = new Set<string>();
-                
-                if (apiResult.Skus && Array.isArray(apiResult.Skus)) {
-                    apiResult.Skus.forEach((sku: any) => {
-                        if (sku.Properties && Array.isArray(sku.Properties)) {
-                            sku.Properties.forEach((prop: { Name: string; Value: string }) => {
-                                if (prop.Name.toLowerCase().includes('color')) {
-                                    colors.add(prop.Value.trim());
-                                } else if (prop.Name.toLowerCase().includes('size')) {
-                                    sizes.add(prop.Value.trim());
-                                }
-                            });
-                        }
-                    });
+                if (apiResponse.status === 200 && apiResponse.data.ItemID) {
+                    const apiResult = apiResponse.data;
+                    
+                    const colors = new Set<string>();
+                    const sizes = new Set<string>();
+                    
+                    if (apiResult.Skus && Array.isArray(apiResult.Skus)) {
+                        apiResult.Skus.forEach((sku: any) => {
+                            if (sku.Properties && Array.isArray(sku.Properties)) {
+                                sku.Properties.forEach((prop: { Name: string; Value: string }) => {
+                                    if (prop.Name.toLowerCase().includes('color')) {
+                                        colors.add(prop.Value.trim());
+                                    } else if (prop.Name.toLowerCase().includes('size')) {
+                                        sizes.add(prop.Value.trim());
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    
+                    apiDataToSave = {
+                        platform: apiResult.Platform,
+                        mainImages: apiResult.Images || [],
+                        description: apiResult.Description,
+                        priceCNY: apiResult.Price,
+                        shopInfo: apiResult.ShopInfo,
+                        dimensions: apiResult.Dimensions,
+                        skus: apiResult.Skus || [],
+                        availableColors: Array.from(colors),
+                        availableSizes: Array.from(sizes),
+                    };
                 }
-                
-                apiDataToSave = {
-                    platform: apiResult.Platform,
-                    mainImages: apiResult.Images || [],
-                    description: apiResult.Description,
-                    priceCNY: apiResult.Price,
-                    shopInfo: apiResult.ShopInfo,
-                    dimensions: apiResult.Dimensions,
-                    skus: apiResult.Skus || [],
-                    availableColors: Array.from(colors),
-                    availableSizes: Array.from(sizes),
-                };
             }
         } catch (apiError) {
             console.warn("Nie udało się pobrać dodatkowych danych z API, produkt zostanie zapisany z danymi podstawowymi.", apiError);
@@ -107,6 +105,9 @@ export async function POST(req: Request) {
             category: category || null, 
             createdBy: session.user.id,
         });
+
+        // <<< DODANE LOGOWANIE DO HISTORII >>>
+        await logHistory(session, 'add', 'product', newProduct._id.toString(), `dodał produkt "${newProduct.name}"`);
 
         return NextResponse.json(newProduct, { status: 201 });
 
