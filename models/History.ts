@@ -19,7 +19,7 @@ const HistorySchema: Schema = new Schema({
     name: { type: String, required: true },
   },
   action: { type: String, required: true, enum: ['add', 'edit', 'delete'] },
-  entity: { type: String, required: true, enum: ['product', 'batch', 'seller', 'category'] },
+  entity: { type: String, required: true, enum: ['product', 'batch', 'seller', 'category', 'guide'] },
   entityId: { type: String, required: true },
   details: { type: String, required: true },
 }, { timestamps: true });

@@ -31,6 +31,7 @@ export async function POST(req: Request) {
         const newGuide = new GuideModel(body);
         await newGuide.save();
         
+        // <<< LOGOWANIE DO HISTORII >>>
         await logHistory(session, 'add', 'guide', newGuide._id.toString(), `dodał poradnik "${newGuide.title}"`);
 
         return NextResponse.json(newGuide, { status: 201 });

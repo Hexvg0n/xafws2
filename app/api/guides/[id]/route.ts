@@ -20,6 +20,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         const updatedGuide = await GuideModel.findByIdAndUpdate(params.id, body, { new: true });
         if (!updatedGuide) return NextResponse.json({ error: 'Nie znaleziono poradnika' }, { status: 404 });
         
+        // <<< LOGOWANIE DO HISTORII >>>
         await logHistory(session, 'edit', 'guide', updatedGuide._id.toString(), `zedytował poradnik "${updatedGuide.title}"`);
         
         return NextResponse.json(updatedGuide);
@@ -40,6 +41,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
         const deletedGuide = await GuideModel.findByIdAndDelete(params.id);
         if (!deletedGuide) return NextResponse.json({ error: 'Nie znaleziono poradnika' }, { status: 404 });
         
+        // <<< LOGOWANIE DO HISTORII >>>
         await logHistory(session, 'delete', 'guide', deletedGuide._id.toString(), `usunął poradnik "${deletedGuide.title}"`);
 
         return NextResponse.json({ message: 'Poradnik usunięty pomyślnie' });

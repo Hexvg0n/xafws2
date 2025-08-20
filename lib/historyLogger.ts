@@ -3,7 +3,6 @@
 import HistoryModel from '@/models/History';
 import { type Session } from 'next-auth';
 
-// ZMIANA: Dodajemy 'guide' do listy dozwolonych typów
 type Action = 'add' | 'edit' | 'delete';
 type Entity = 'product' | 'batch' | 'seller' | 'category' | 'guide';
 
