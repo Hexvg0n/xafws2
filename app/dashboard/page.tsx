@@ -13,6 +13,7 @@ import { ProductManagerView } from "./components/ProductManagerView";
 import { SellerManager } from "./components/seller-manager";
 import { RoleManager } from "./components/RoleManager";
 import { CategoryManager } from "./components/CategoryManager";
+import { BatchManagerView } from "./components/BatchManagerView"; // NOWY IMPORT
 
 type UserRole = 'root' | 'admin' | 'adder' | 'user';
 type AdminTab = "stats" | "products" | "sellers" | "batches" | "role-management" | "categories";
@@ -27,7 +28,7 @@ export default function AdminDashboardPage() {
     { id: "products", name: "Produkty", icon: <Package className="w-4 h-4" />, roles: ["admin", "root", "adder"] },
     { id: "categories", name: "Kategorie", icon: <Tags className="w-4 h-4" />, roles: ["admin", "root"] },
     { id: "sellers", name: "Sprzedawcy", icon: <Shield className="w-4 h-4" />, roles: ["admin", "root"] },
-    { id: "batches", name: "Best Batches", icon: <Star className="w-4 h-4" />, roles: ["admin", "root"] },
+    { id: "batches", name: "Best Batches", icon: <Star className="w-4 h-4" />, roles: ["admin", "root", "adder"] }, // ZMIENIONA ROLA
     { id: "role-management", name: "Zarządzaj Rolami", icon: <KeyRound className="w-4 h-4" />, roles: ["root"] },
   ];
 
@@ -44,6 +45,7 @@ export default function AdminDashboardPage() {
       case "stats": return <div className="text-white text-center p-8">Widok Statystyk (do zaimplementowania)</div>;
       case "products": return <ProductManagerView />;
       case "sellers": return <SellerManager />;
+      case "batches": return <BatchManagerView />; // NOWY WIDOK
       case "role-management": return <RoleManager />;
       case "categories": return <CategoryManager />;
       default: return <div className="text-white text-center p-8">Wybierz zakładkę</div>;

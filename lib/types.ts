@@ -42,14 +42,23 @@ export type Seller = {
 
 export type Batch = {
   _id: string;
-  title: string;
-  image: string;
-  price: number;
-  link: string;
-  batch_name: string;
+  name: string;
+  sourceUrl: string;
+  thumbnailUrl?: string;
+  mainImages: string[];
+  description?: string;
+  priceCNY: number;
+  availableColors: string[];
+  availableSizes: string[];
+  shopInfo?: {
+    ShopName?: string;
+    ShopLogo?: string;
+    ShopID?: string;
+  };
+  batch: string; // Nazwa batcha
   views: number;
   favorites: number;
-  clicks: number;
+  createdBy: string;
 };
 
 export type AdminTab = "stats" | "products" | "user-management" | "user-approval" | "promos" | "sellers" | "batches" | "role-management";

@@ -1,51 +1,38 @@
-// components/w2c/w2c-content.tsx
+// components/best-batch/best-batch-content.tsx
 
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Search, Grid, List, Loader2 } from "lucide-react";
-import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { ProductCard } from "./product-card";
+import { BatchCard } from "./batch-card";
 import { useWishlist } from "../context/WishlistProvider";
 import { usePreferences } from "../context/PreferencesProvider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type Product = any;
-type Category = {
-    _id: string;
-    name: string;
-};
+type Batch = any;
 
-export function W2CContent() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+export function BestBatchContent() {
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { wishlist, toggleFavorite } = useWishlist();
   const { isLoading: isLoadingPreferences } = usePreferences();
-  const { data: session } = useSession();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("createdAt");
-  const [selectedCategory, setSelectedCategory] = useState("all");
 
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [productsRes, categoriesRes] = await Promise.all([
-        fetch('/api/products'),
-        fetch('/api/categories'),
-      ]);
+      const batchesRes = await fetch('/api/batches');
       
-      if (!productsRes.ok) throw new Error('Nie udało się pobrać produktów.');
-      if (!categoriesRes.ok) throw new Error('Nie udało się pobrać kategorii.');
+      if (!batchesRes.ok) throw new Error('Nie udało się pobrać batchy.');
       
-      setProducts(await productsRes.json());
-      setCategories(await categoriesRes.json());
+      setBatches(await batchesRes.json());
       
     } catch (err) {
       setError((err as Error).message);
@@ -58,14 +45,12 @@ export function W2CContent() {
     fetchInitialData();
   }, [fetchInitialData]);
   
-  const filteredProducts = products
-    .filter((product) => {
-        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-        return matchesSearch && matchesCategory;
+  const filteredBatches = batches
+    .filter((batch) => {
+        return batch.name.toLowerCase().includes(searchTerm.toLowerCase()) || batch.batch.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
+  const sortedBatches = [...filteredBatches].sort((a, b) => {
       switch (sortBy) {
         case "price-low": return (a.priceCNY || 0) - (b.priceCNY || 0);
         case "price-high": return (b.priceCNY || 0) - (a.priceCNY || 0);
@@ -91,24 +76,13 @@ export function W2CContent() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
             <input
               type="text"
-              placeholder="Szukaj produktów..."
+              placeholder="Szukaj batchy..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white"
             />
           </div>
           <div className="flex items-center space-x-4">
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full md:w-[180px] bg-white/5 border-white/10">
-                    <SelectValue placeholder="Filtruj po kategorii..." />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">Wszystkie Kategorie</SelectItem>
-                    {categories.map(cat => (
-                        <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white">
               <option value="createdAt">Sortuj: Najnowsze</option>
               <option value="price-low">Sortuj: Cena rosnąco</option>
@@ -125,13 +99,13 @@ export function W2CContent() {
       </div>
       
       <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-        {sortedProducts.map((product, index) => (
-          <motion.div key={product._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-            <ProductCard
-              product={product}
+        {sortedBatches.map((batch, index) => (
+          <motion.div key={batch._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+            <BatchCard
+              batch={batch}
               viewMode={viewMode}
-              isFavorited={wishlist.products.some((item: any) => item._id === product._id)}
-              onToggleFavorite={() => toggleFavorite(product, 'product')}
+              isFavorited={wishlist.batches.some((item: any) => item._id === batch._id)}
+              onToggleFavorite={() => toggleFavorite(batch, 'batch')}
             />
           </motion.div>
         ))}

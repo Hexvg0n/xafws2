@@ -5,10 +5,15 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
 
+// Define the shape of our wishlist state
+interface WishlistState {
+  products: any[];
+  batches: any[];
+}
+
 interface WishlistContextType {
-  wishlist: any[];
-  setWishlist: React.Dispatch<React.SetStateAction<any[]>>;
-  toggleFavorite: (product: any) => Promise<void>;
+  wishlist: WishlistState;
+  toggleFavorite: (item: any, itemType: 'product' | 'batch') => Promise<void>;
   isLoading: boolean;
 }
 
@@ -23,7 +28,7 @@ export const useWishlist = () => {
 };
 
 export const WishlistProvider = ({ children }: { children: ReactNode }) => {
-  const [wishlist, setWishlist] = useState<any[]>([]);
+  const [wishlist, setWishlist] = useState<WishlistState>({ products: [], batches: [] });
   const [isLoading, setIsLoading] = useState(true);
   const { data: session, status } = useSession();
 
@@ -35,7 +40,10 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
           const res = await fetch('/api/profile');
           if (res.ok) {
             const data = await res.json();
-            setWishlist(data.wishlist || []);
+            setWishlist({
+              products: data.wishlist || [],
+              batches: data.batchWishlist || [],
+            });
           }
         } catch (error) {
           console.error("Failed to fetch wishlist", error);
@@ -43,41 +51,43 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
           setIsLoading(false);
         }
       } else if (status === 'unauthenticated') {
-        setWishlist([]);
+        setWishlist({ products: [], batches: [] });
         setIsLoading(false);
       }
     };
     fetchWishlist();
   }, [status]);
 
-  const toggleFavorite = async (product: any) => {
+  const toggleFavorite = async (item: any, itemType: 'product' | 'batch') => {
     if (!session) {
       alert("Musisz być zalogowany, aby zarządzać ulubionymi.");
       return;
     }
 
-    const isCurrentlyFavorited = wishlist.some(item => item._id === product._id);
-    const originalWishlist = [...wishlist];
+    const listKey = itemType === 'product' ? 'products' : 'batches';
+    const isCurrentlyFavorited = wishlist[listKey].some(i => i._id === item._id);
+    const originalWishlist = { ...wishlist };
 
-    // Optymistyczna aktualizacja UI
-    const newWishlist = isCurrentlyFavorited
-      ? wishlist.filter(item => item._id !== product._id)
-      : [...wishlist, product];
-    setWishlist(newWishlist);
+    // Optimistic UI update
+    const newList = isCurrentlyFavorited
+      ? wishlist[listKey].filter(i => i._id !== item._id)
+      : [...wishlist[listKey], item];
+    
+    setWishlist(prev => ({ ...prev, [listKey]: newList }));
 
     try {
       await Promise.all([
         fetch('/api/profile/wishlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId: product._id }),
+          body: JSON.stringify({ itemId: item._id, itemType }),
         }),
         fetch('/api/stats/track', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            type: !isCurrentlyFavorited ? 'productFavorite' : 'productUnfavorite',
-            id: product._id
+            type: !isCurrentlyFavorited ? `${itemType}Favorite` : `${itemType}Unfavorite`,
+            id: item._id
           }),
         })
       ]);
@@ -88,7 +98,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <WishlistContext.Provider value={{ wishlist, setWishlist, toggleFavorite, isLoading }}>
+    <WishlistContext.Provider value={{ wishlist, toggleFavorite, isLoading }}>
       {children}
     </WishlistContext.Provider>
   );

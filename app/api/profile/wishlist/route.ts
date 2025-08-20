@@ -13,9 +13,9 @@ export async function POST(req: Request) {
     }
 
     try {
-        const { productId } = await req.json();
-        if (!productId) {
-            return NextResponse.json({ error: 'Brak ID produktu' }, { status: 400 });
+        const { itemId, itemType } = await req.json();
+        if (!itemId || !itemType) {
+            return NextResponse.json({ error: 'Brak ID lub typu przedmiotu' }, { status: 400 });
         }
 
         await dbConnect();
@@ -24,24 +24,23 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Nie znaleziono użytkownika' }, { status: 404 });
         }
 
-        // Poprawka: Inicjalizuj wishlist jako pustą tablicę, jeśli nie istnieje
-        if (!user.wishlist) {
-            user.wishlist = [];
+        const wishlistField = itemType === 'batch' ? 'batchWishlist' : 'wishlist';
+
+        if (!user[wishlistField]) {
+            user[wishlistField] = [];
         }
 
-        const index = user.wishlist.indexOf(productId);
+        const index = user[wishlistField].indexOf(itemId);
         let updatedUser;
 
         if (index > -1) {
-            // Produkt jest już na liście - usuwamy go
-            user.wishlist.splice(index, 1);
+            user[wishlistField].splice(index, 1);
             updatedUser = await user.save();
-            return NextResponse.json({ message: "Usunięto z ulubionych", wishlist: updatedUser.wishlist });
+            return NextResponse.json({ message: "Usunięto z ulubionych", [wishlistField]: updatedUser[wishlistField] });
         } else {
-            // Produktu nie ma na liście - dodajemy go
-            user.wishlist.push(productId);
+            user[wishlistField].push(itemId);
             updatedUser = await user.save();
-            return NextResponse.json({ message: "Dodano do ulubionych", wishlist: updatedUser.wishlist });
+            return NextResponse.json({ message: "Dodano do ulubionych", [wishlistField]: updatedUser[wishlistField] });
         }
 
     } catch (error) {

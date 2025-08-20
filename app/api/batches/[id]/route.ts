@@ -1,28 +1,63 @@
-import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/dbConnect';
-import Batch from '@/models/Batch';
+// app/api/batches/[id]/route.ts
 
-// PATCH - Aktualizacja batcha
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-    await dbConnect();
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../auth/[...nextauth]/route';
+import dbConnect from '@/lib/dbConnect';
+import BatchModel from '@/models/Batch';
+
+interface Params {
+    params: { id: string }
+}
+
+// --- FUNKCJA PATCH (EDYCJA) ---
+export async function PATCH(req: Request, { params }: Params) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !['admin', 'root', 'adder'].includes(session.user.role)) {
+        return NextResponse.json({ error: 'Brak uprawnień' }, { status: 403 });
+    }
+
     try {
         const body = await req.json();
-        const updatedBatch = await Batch.findByIdAndUpdate(params.id, body, { new: true });
-        if (!updatedBatch) return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
-        return NextResponse.json(updatedBatch);
+        await dbConnect();
+        
+        const updatedBatch = await BatchModel.findByIdAndUpdate(
+            params.id,
+            body,
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedBatch) {
+            return NextResponse.json({ error: "Nie znaleziono batcha." }, { status: 404 });
+        }
+
+        return NextResponse.json(updatedBatch, { status: 200 });
+
     } catch (error) {
-        return NextResponse.json({ error: 'Error updating batch' }, { status: 400 });
+        console.error("Błąd podczas aktualizacji batcha:", error);
+        return NextResponse.json({ error: 'Błąd serwera.' }, { status: 500 });
     }
 }
 
-// DELETE - Usunięcie batcha
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-    await dbConnect();
+// --- FUNKCJA DELETE (USUWANIE) ---
+export async function DELETE(req: Request, { params }: Params) {
+    const session = await getServerSession(authOptions);
+     if (!session?.user || !['admin', 'root', 'adder'].includes(session.user.role)) {
+        return NextResponse.json({ error: 'Brak uprawnień' }, { status: 403 });
+    }
+
     try {
-        const deletedBatch = await Batch.findByIdAndDelete(params.id);
-        if (!deletedBatch) return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
-        return NextResponse.json({ message: 'Batch deleted successfully' });
+        await dbConnect();
+        const deletedBatch = await BatchModel.findByIdAndDelete(params.id);
+
+        if (!deletedBatch) {
+            return NextResponse.json({ error: "Nie znaleziono batcha do usunięcia." }, { status: 404 });
+        }
+
+        return NextResponse.json({ message: "Batch został pomyślnie usunięty." }, { status: 200 });
+
     } catch (error) {
-        return NextResponse.json({ error: 'Error deleting batch' }, { status: 500 });
+        console.error("Błąd podczas usuwania batcha:", error);
+        return NextResponse.json({ error: 'Błąd serwera.' }, { status: 500 });
     }
 }

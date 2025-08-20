@@ -28,7 +28,7 @@ import { Icons } from "@/components/ui/icons";
 
 const navItems = [
   { name: "W2C", href: "/w2c" },
-  { name: "Best Batch", href: "/best-batch" },
+  { name: "Best Batch", href: "/bb" },
   { name: "Sellers", href: "/sellers" },
   { name: "Tools", href: "/tools" },
   { name: "How To", href: "/how-to" },
@@ -41,6 +41,9 @@ export function Navbar() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
   const { wishlist } = useWishlist();
+
+  const totalFavorites = (wishlist.products?.length || 0) + (wishlist.batches?.length || 0);
+  const allFavorites = [...(wishlist.products || []), ...(wishlist.batches || [])];
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -85,8 +88,8 @@ export function Navbar() {
                   <HoverCardTrigger asChild>
                     <Button variant="ghost" size="icon" className="text-white/70 hover:text-white relative">
                       <Heart />
-                      {wishlist.length > 0 && (
-                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">{wishlist.length}</span>
+                      {totalFavorites > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">{totalFavorites}</span>
                       )}
                     </Button>
                   </HoverCardTrigger>
@@ -95,10 +98,10 @@ export function Navbar() {
                       <h4 className="font-semibold">Ulubione</h4>
                       <Button asChild variant="link" className="p-0 h-auto text-emerald-400"><Link href="/profile">Zobacz wszystkie</Link></Button>
                     </div>
-                    {wishlist.length > 0 ? (
+                    {totalFavorites > 0 ? (
                       <div className="space-y-3">
-                        {wishlist.slice(0, 3).map(item => (
-                          <Link href={`/w2c/${item._id}`} key={item._id} className="flex items-center gap-3 hover:bg-white/10 p-2 rounded-md transition-colors">
+                        {allFavorites.slice(0, 3).map((item: any) => (
+                          <Link href={item.batch ? `/bb/${item._id}`: `/w2c/${item._id}`} key={item._id} className="flex items-center gap-3 hover:bg-white/10 p-2 rounded-md transition-colors">
                             <Image src={item.thumbnailUrl || '/placeholder.svg'} alt={item.name} width={48} height={48} className="w-12 h-12 rounded-md object-cover"/>
                             <div className="flex-1 overflow-hidden">
                               <p className="text-sm font-medium truncate">{item.name}</p>
@@ -146,7 +149,6 @@ export function Navbar() {
             )}
           </div>
           <div className="md:hidden">
-            {/* ZMIANA: Poprawiona składnia JSX */}
             <Button onClick={() => setIsOpen(!isOpen)} variant="ghost" size="sm" className="text-white/70 hover:text-white">
               {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </Button>

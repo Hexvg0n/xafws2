@@ -18,12 +18,20 @@ export async function POST(req: Request) {
         let updateResult;
         
         switch(type) {
-            // ZMIANA: Dodano nową obsługę zdarzenia
             case 'sellerClick':
                 updateResult = await Seller.findByIdAndUpdate(id, { $inc: { clicks: 1 } });
                 break;
             case 'batchClick':
                 updateResult = await Batch.findByIdAndUpdate(id, { $inc: { clicks: 1 } });
+                break;
+            case 'batchView':
+                updateResult = await Batch.findByIdAndUpdate(id, { $inc: { views: 1 } });
+                break;
+            case 'batchFavorite': // NOWA OBSŁUGA
+                updateResult = await Batch.findByIdAndUpdate(id, { $inc: { favorites: 1 } });
+                break;
+            case 'batchUnfavorite': // NOWA OBSŁUGA
+                updateResult = await Batch.findByIdAndUpdate(id, { $inc: { favorites: -1 } });
                 break;
             case 'productView':
                 updateResult = await ProductModel.findByIdAndUpdate(id, { $inc: { views: 1 } });
