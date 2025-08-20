@@ -1,11 +1,10 @@
 // app/api/products/[id]/route.ts
-
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import ProductModel from '@/models/Product';
-import { logHistory } from '@/lib/historyLogger'; // <<< Nowy import
+import mongoose from 'mongoose';
 
 interface Params {
     params: { id: string }
@@ -18,23 +17,25 @@ export async function PATCH(req: Request, { params }: Params) {
         return NextResponse.json({ error: 'Brak uprawnień' }, { status: 403 });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+        return NextResponse.json({ error: "Nieprawidłowy identyfikator produktu" }, { status: 400 });
+    }
+
     try {
         const body = await req.json();
-        
+        const { name, sourceUrl, shopInfo } = body;
+
         await dbConnect();
         
         const updatedProduct = await ProductModel.findByIdAndUpdate(
             params.id,
-            body, // Przekazujemy całe body, aby umożliwić aktualizację różnych pól
+            { name, sourceUrl, shopInfo },
             { new: true, runValidators: true }
         );
 
         if (!updatedProduct) {
             return NextResponse.json({ error: "Nie znaleziono produktu." }, { status: 404 });
         }
-
-        // <<< DODANE LOGOWANIE DO HISTORII >>>
-        await logHistory(session, 'edit', 'product', updatedProduct._id.toString(), `zedytował produkt "${updatedProduct.name}"`);
 
         return NextResponse.json(updatedProduct, { status: 200 });
 
@@ -51,6 +52,10 @@ export async function DELETE(req: Request, { params }: Params) {
         return NextResponse.json({ error: 'Brak uprawnień' }, { status: 403 });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+        return NextResponse.json({ error: "Nieprawidłowy identyfikator produktu" }, { status: 400 });
+    }
+
     try {
         await dbConnect();
         const deletedProduct = await ProductModel.findByIdAndDelete(params.id);
@@ -58,9 +63,6 @@ export async function DELETE(req: Request, { params }: Params) {
         if (!deletedProduct) {
             return NextResponse.json({ error: "Nie znaleziono produktu do usunięcia." }, { status: 404 });
         }
-
-        // <<< DODANE LOGOWANIE DO HISTORII >>>
-        await logHistory(session, 'delete', 'product', deletedProduct._id.toString(), `usunął produkt "${deletedProduct.name}"`);
 
         return NextResponse.json({ message: "Produkt został pomyślnie usunięty." }, { status: 200 });
 

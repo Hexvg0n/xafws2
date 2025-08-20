@@ -7,7 +7,6 @@ import bcrypt from 'bcryptjs';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from '../auth/[...nextauth]/route';
 
-// Funkcja GET do pobierania listy użytkowników
 export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
     const { searchParams } = new URL(req.url);
@@ -22,19 +21,14 @@ export async function GET(req: Request) {
     try {
         let query: any = {};
 
-        // Filtracja po statusie (np. dla zakładki "Zatwierdź Użytkowników")
         if (status) {
             query.status = status;
         }
 
-        // *** KLUCZOWA ZMIANA LOGIKI FILTROWANIA ***
-        // Jeśli zalogowany użytkownik to 'admin', pokaż mu tylko użytkowników z rolą 'adder'.
-        // Root w tym warunku nie jest uwzględniony, więc zobaczy wszystkich użytkowników pasujących do 'query'.
         if (session.user.role === 'admin') {
             query.role = 'adder';
         }
         
-        // Root nie powinien widzieć samego siebie na liście do zarządzania
         if (session.user.role === 'root') {
             query._id = { $ne: session.user.id };
         }
@@ -49,7 +43,6 @@ export async function GET(req: Request) {
 }
 
 
-// Funkcja POST do tworzenia nowych użytkowników (pozostaje bez zmian)
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
 

@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
-  BarChart3, Package, Shield, Star, KeyRound, Tags, History
+  BarChart3, Package, Shield, Star, KeyRound, Tags, History, BookOpen // <<< DODAJ IKONĘ
 } from "lucide-react";
 import { ProductManagerView } from "./components/ProductManagerView";
 import { SellerManager } from "./components/seller-manager";
@@ -15,10 +15,11 @@ import { RoleManager } from "./components/RoleManager";
 import { CategoryManager } from "./components/CategoryManager";
 import { BatchManagerView } from "./components/BatchManagerView";
 import { HistoryView } from "./components/HistoryView";
-import { StatsView } from "./components/StatsView"; // <<< DODANY IMPORT
+import { StatsView } from "./components/StatsView";
+import { GuideManager } from "./components/GuideManager"; // <<< DODAJ IMPORT
 
 type UserRole = 'root' | 'admin' | 'adder' | 'user';
-type AdminTab = "stats" | "products" | "sellers" | "batches" | "role-management" | "categories" | "history";
+type AdminTab = "stats" | "products" | "sellers" | "batches" | "role-management" | "categories" | "history" | "guides"; // <<< DODAJ 'guides'
 
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>("products");
@@ -31,6 +32,7 @@ export default function AdminDashboardPage() {
     { id: "categories", name: "Kategorie", icon: <Tags className="w-4 h-4" />, roles: ["admin", "root"] },
     { id: "sellers", name: "Sprzedawcy", icon: <Shield className="w-4 h-4" />, roles: ["admin", "root"] },
     { id: "batches", name: "Best Batches", icon: <Star className="w-4 h-4" />, roles: ["admin", "root", "adder"] },
+    { id: "guides", name: "Poradniki", icon: <BookOpen className="w-4 h-4" />, roles: ["admin", "root"] }, // <<< DODAJ NOWĄ ZAKŁADKĘ
     { id: "history", name: "Historia", icon: <History className="w-4 h-4" />, roles: ["root"] },
     { id: "role-management", name: "Zarządzaj Rolami", icon: <KeyRound className="w-4 h-4" />, roles: ["root"] },
   ];
@@ -45,10 +47,11 @@ export default function AdminDashboardPage() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case "stats": return <StatsView />; // <<< ZMIENIONA LINIA
+      case "stats": return <StatsView />;
       case "products": return <ProductManagerView />;
       case "sellers": return <SellerManager />;
       case "batches": return <BatchManagerView />;
+      case "guides": return <GuideManager />; // <<< DODAJ NOWY WIDOK
       case "history": return <HistoryView />;
       case "role-management": return <RoleManager />;
       case "categories": return <CategoryManager />;

@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import dbConnect from "@/lib/dbConnect";
 import UserModel from "@/models/User";
+import mongoose from "mongoose";
 
 interface Params {
     params: { id: string }
@@ -18,6 +19,10 @@ export async function PATCH(req: Request, { params }: Params) {
     // Tylko root i admin mogą modyfikować użytkowników
     if (!currentUserRole || !['root', 'admin'].includes(currentUserRole)) {
         return NextResponse.json({ error: "Brak dostępu" }, { status: 403 });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userIdToUpdate)) {
+        return NextResponse.json({ error: "Nieprawidłowy identyfikator użytkownika" }, { status: 400 });
     }
 
     try {
@@ -69,6 +74,10 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     // Krok 2: Root nie może usunąć sam siebie
     if (session.user.id === userIdToDelete) {
         return NextResponse.json({ error: "Nie możesz usunąć własnego konta" }, { status: 400 });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userIdToDelete)) {
+        return NextResponse.json({ error: "Nieprawidłowy identyfikator użytkownika" }, { status: 400 });
     }
 
     try {

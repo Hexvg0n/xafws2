@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Link2, Search, Loader2, AlertCircle, X, ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import DOMPurify from 'isomorphic-dompurify';
 
 // Definicja typów na podstawie JSONa
 interface QcGroup {
@@ -149,7 +150,7 @@ export function QCChecker() {
       {error && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-lg flex items-center gap-3">
           <AlertCircle className="w-5 h-5" />
-          <span>{error}</span>
+          <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(error) }}></span>
         </motion.div>
       )}
 
@@ -176,7 +177,7 @@ export function QCChecker() {
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                             <div className="absolute bottom-4 left-4 text-white">
-                                <p className="font-semibold">{group.order_no.replace(/\*\*\*\*/, '...')}</p>
+                                <p className="font-semibold" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(group.order_no.replace(/\*\*\*\*/, '...')) }}></p>
                                 <p className="text-sm text-white/70 flex items-center gap-1.5">
                                     <ImageIcon className="w-4 h-4" />
                                     {group.image_list.length} zdjęć
