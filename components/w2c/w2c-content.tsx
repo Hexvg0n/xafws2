@@ -4,17 +4,23 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Search, Grid, List, SlidersHorizontal, X, Loader2 } from "lucide-react";
+import { Search, Grid, List, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "./product-card";
 import { useWishlist } from "../context/WishlistProvider";
 import { usePreferences } from "../context/PreferencesProvider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type Product = any; // Uproszczony typ dla elastyczności
+type Product = any;
+type Category = {
+    _id: string;
+    name: string;
+};
 
 export function W2CContent() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { wishlist, toggleFavorite } = useWishlist();
@@ -23,17 +29,24 @@ export function W2CContent() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState("createdAt");
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
-  const fetchProducts = useCallback(async () => {
+  const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const productsRes = await fetch('/api/products');
+      const [productsRes, categoriesRes] = await Promise.all([
+        fetch('/api/products'),
+        fetch('/api/categories'),
+      ]);
+      
       if (!productsRes.ok) throw new Error('Nie udało się pobrać produktów.');
-      const productsData = await productsRes.json();
-      setProducts(productsData);
+      if (!categoriesRes.ok) throw new Error('Nie udało się pobrać kategorii.');
+      
+      setProducts(await productsRes.json());
+      setCategories(await categoriesRes.json());
+      
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -42,12 +55,17 @@ export function W2CContent() {
   }, []);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    fetchInitialData();
+  }, [fetchInitialData]);
+  
+  const filteredProducts = products
+    .filter((product) => {
+        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+    });
 
-  const sortedProducts = [...products]
-    .filter((product) => product.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => {
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
       switch (sortBy) {
         case "price-low": return (a.priceCNY || 0) - (b.priceCNY || 0);
         case "price-high": return (b.priceCNY || 0) - (a.priceCNY || 0);
@@ -69,22 +87,29 @@ export function W2CContent() {
     <div className="space-y-6">
       <div className="glass-morphism rounded-2xl p-6">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="relative flex-1 w-full md:max-w-md">
+          <div className="relative flex-1 w-full md:max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
             <input
               type="text"
               placeholder="Szukaj produktów..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white"
             />
           </div>
           <div className="flex items-center space-x-4">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full md:w-[180px] bg-white/5 border-white/10">
+                    <SelectValue placeholder="Filtruj po kategorii..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Wszystkie Kategorie</SelectItem>
+                    {categories.map(cat => (
+                        <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white">
               <option value="createdAt">Sortuj: Najnowsze</option>
               <option value="price-low">Sortuj: Cena rosnąco</option>
               <option value="price-high">Sortuj: Cena malejąco</option>
@@ -92,12 +117,8 @@ export function W2CContent() {
               <option value="views">Sortuj: Wyświetlenia</option>
             </select>
             <div className="flex items-center space-x-2">
-              <Button variant={viewMode === "grid" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("grid")} className={viewMode === "grid" ? "bg-emerald-500 hover:bg-emerald-600" : "text-white/60 hover:text-white"}>
-                <Grid className="w-4 h-4" />
-              </Button>
-              <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("list")} className={viewMode === "list" ? "bg-emerald-500 hover:bg-emerald-600" : "text-white/60 hover:text-white"}>
-                <List className="w-4 h-4" />
-              </Button>
+              <Button variant={viewMode === "grid" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("grid")} className={viewMode === "grid" ? "bg-emerald-500" : "text-white/60"}><Grid className="w-4 h-4" /></Button>
+              <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("list")} className={viewMode === "list" ? "bg-emerald-500" : "text-white/60"}><List className="w-4 h-4" /></Button>
             </div>
           </div>
         </div>
@@ -116,5 +137,5 @@ export function W2CContent() {
         ))}
       </div>
     </div>
-  );
+  )
 }

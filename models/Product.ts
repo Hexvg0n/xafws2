@@ -14,7 +14,6 @@ const ProductSchema = new Schema({
         unique: true 
     },
     thumbnailUrl: { type: String },
-    // Upewnij się, że ta linia wygląda dokładnie tak:
     platform: { type: String, enum: ['1688', 'taobao', 'weidian', 'tmall'] },
     mainImages: [String], 
     description: { type: String },
@@ -34,13 +33,15 @@ const ProductSchema = new Schema({
     availableSizes: [String],
     views: { type: Number, default: 0 },
     favorites: { type: Number, default: 0 },
+    category: {
+        type: Schema.Types.ObjectId,
+        ref: 'Category',
+    }, 
     createdBy: {
         type: Schema.Types.ObjectId,
         ref: 'User',
         required: true,
     }
-}, {
-    timestamps: true,
-});
+}, { timestamps: true });
 
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema);

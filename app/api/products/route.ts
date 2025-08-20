@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
     try {
         const manualData = await req.json();
-        const { name, sourceUrl, thumbnailUrl } = manualData;
+        const { name, sourceUrl, thumbnailUrl, category } = manualData; 
 
         if (!name || !sourceUrl) {
             return NextResponse.json({ error: 'Nazwa i link do produktu są wymagane.' }, { status: 400 });
@@ -104,6 +104,7 @@ export async function POST(req: Request) {
             name,
             sourceUrl,
             thumbnailUrl,
+            category: category || null, 
             createdBy: session.user.id,
         });
 

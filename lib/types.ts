@@ -40,4 +40,16 @@ export type Seller = {
   clicks: number;
 };
 
+export type Batch = {
+  _id: string;
+  title: string;
+  image: string;
+  price: number;
+  link: string;
+  batch_name: string;
+  views: number;
+  favorites: number;
+  clicks: number;
+};
+
 export type AdminTab = "stats" | "products" | "user-management" | "user-approval" | "promos" | "sellers" | "batches" | "role-management";

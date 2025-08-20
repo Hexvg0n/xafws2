@@ -1,5 +1,3 @@
-// components/w2c/product-details.tsx
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -16,7 +14,8 @@ import {
   Palette,
   Store,
   Loader2,
-  AlertTriangle, // <-- Upewnij się, że ten import istnieje
+  AlertTriangle,
+  Star, // <-- Dodany import
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,10 +31,25 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // <-- Upewnij się, że te importy istnieją
+} from "@/components/ui/alert-dialog";
 
-type Product = any;
+type Product = {
+  _id: string;
+  name: string;
+  sourceUrl: string;
+  thumbnailUrl?: string;
+  mainImages: string[];
+  description?: string;
+  priceCNY: number;
+  availableColors: string[];
+  availableSizes: string[];
+  shopInfo?: {
+    ShopName?: string;
+  };
+  batch?: string; // Pole na nazwę batcha
+};
 
+// Zmiana: Uproszczono propsy, komponent jest teraz w pełni zależny od globalnego stanu
 export function ProductDetails({ product }: { product: Product }) {
   const [selectedImage, setSelectedImage] = useState(product.thumbnailUrl || product.mainImages?.[0] || "/placeholder.svg");
   const { data: session } = useSession();
@@ -45,7 +59,7 @@ export function ProductDetails({ product }: { product: Product }) {
   const [isFavorited, setIsFavorited] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
   const [isLoadingLink, setIsLoadingLink] = useState(false);
-  const [showLoginAlert, setShowLoginAlert] = useState(false); // <-- Stan do zarządzania popupem
+  const [showLoginAlert, setShowLoginAlert] = useState(false);
 
   useEffect(() => {
     setIsFavorited(wishlist.some(item => item._id === product._id));
@@ -53,7 +67,7 @@ export function ProductDetails({ product }: { product: Product }) {
 
   const handleFavoriteClick = async () => {
     if (!session) {
-      setShowLoginAlert(true); // <-- Pokaż popup zamiast alertu
+      setShowLoginAlert(true);
       return;
     }
     setIsFavoriteLoading(true);
@@ -74,7 +88,6 @@ export function ProductDetails({ product }: { product: Product }) {
 
   return (
     <>
-      {/* --- POPUP WYMAGAJĄCY LOGOWANIA --- */}
       <AlertDialog open={showLoginAlert} onOpenChange={setShowLoginAlert}>
         <AlertDialogContent className="glass-morphism text-white border-white/20">
           <AlertDialogHeader>
@@ -92,7 +105,12 @@ export function ProductDetails({ product }: { product: Product }) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
-          <Link href="/w2c"><Button variant="ghost" className="text-white/60 hover:text-white"><ChevronLeft className="w-4 h-4 mr-2" />Powrót do katalogu</Button></Link>
+          <Link href="/w2c">
+            <Button variant="ghost" className="text-white/60 hover:text-white hover:bg-white/10">
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Powrót do katalogu
+            </Button>
+          </Link>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3 space-y-4">
@@ -104,7 +122,7 @@ export function ProductDetails({ product }: { product: Product }) {
             {allImages.length > 1 && (
               <div className="grid grid-cols-5 gap-2">
                 {allImages.map((image, index) => (
-                  <button key={index} onClick={() => setSelectedImage(image)} className={`aspect-square rounded-lg overflow-hidden border-2 ${selectedImage === image ? "border-emerald-400" : "border-transparent"}`}>
+                  <button key={index} onClick={() => setSelectedImage(image)} className={`aspect-square rounded-lg overflow-hidden border-2 transition-all duration-200 ${selectedImage === image ? "border-emerald-400" : "border-white/10 hover:border-white/30"}`}>
                     <Image src={image} alt={`${product.name} ${index + 1}`} width={150} height={150} className="w-full h-full object-cover" />
                   </button>
                 ))}
@@ -113,6 +131,12 @@ export function ProductDetails({ product }: { product: Product }) {
           </div>
           <div className="lg:col-span-2 space-y-6">
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="glass-morphism rounded-2xl p-8">
+              {product.batch && (
+                  <div className="flex items-center gap-2 mb-2 text-lg font-semibold text-blue-400">
+                      <Star className="w-5 h-5 fill-current" />
+                      <span>{product.batch}</span>
+                  </div>
+              )}
               <h1 className="text-3xl font-bold text-white mb-3">{product.name}</h1>
               <div className="flex items-center gap-2 mb-4 text-sm text-white/70"><Store className="w-4 h-4 text-emerald-400" /> <span>{product.shopInfo?.ShopName || 'Brak danych'}</span></div>
               <div className="text-4xl font-bold text-emerald-400 mb-2">{product.priceCNY} ¥</div>
@@ -127,7 +151,7 @@ export function ProductDetails({ product }: { product: Product }) {
                 </div>
               )}
               {product.availableColors && product.availableColors.length > 0 && (
-                <div className="mb-6">
+                 <div className="mb-6">
                   <h3 className="text-white font-medium mb-3 flex items-center gap-2"><Palette className="w-4 h-4"/> Dostępne kolory</h3>
                   <div className="flex flex-wrap gap-2">
                     {product.availableColors.map((color: string) => <Badge key={color} variant="secondary">{color}</Badge>)}

@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { Star, Link as LinkIcon, BarChart } from "lucide-react";
 import { type Seller } from "@/lib/types";
-
+import { pluralizePolish } from "@/lib/utils"; 
 interface SellerCardProps {
   seller: Seller;
 }
@@ -52,9 +52,9 @@ export function SellerCard({ seller }: SellerCardProps) {
       <p className="text-sm text-white/70 flex-grow mb-4">{seller.description}</p>
       
       <div className="border-t border-white/10 pt-4 mt-auto flex items-center justify-between">
-        <div className="flex items-center text-sm text-white/60 space-x-2">
+         <div className="flex items-center text-sm text-white/60 space-x-2">
             <BarChart className="w-4 h-4" />
-            <span>{seller.clicks || 0} kliknięć</span>
+            <span>{pluralizePolish(seller.clicks || 0, ['kliknięcie', 'kliknięcia', 'kliknięć'])}</span>
         </div>
         <Link
           href={seller.link || '#'}

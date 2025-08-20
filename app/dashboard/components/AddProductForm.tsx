@@ -2,13 +2,19 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Package } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface Category {
+  _id: string;
+  name: string;
+}
 
 export function AddProductForm({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
   const [sourceUrl, setSourceUrl] = useState("");
@@ -18,6 +24,22 @@ export function AddProductForm({ onSave, onCancel }: { onSave: () => void; onCan
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+        try {
+            const res = await fetch('/api/categories');
+            if (res.ok) {
+                setCategories(await res.json());
+            }
+        } catch (error) {
+            console.error("Błąd pobierania kategorii", error);
+        }
+    };
+    fetchCategories();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,8 +59,8 @@ export function AddProductForm({ onSave, onCancel }: { onSave: () => void; onCan
   };
 
   const handleAddProduct = async () => {
-    if (!name || !sourceUrl) {
-      setError("Nazwa produktu oraz link źródłowy są wymagane.");
+    if (!name || !sourceUrl || !categoryId) {
+      setError("Nazwa, link oraz kategoria są wymagane.");
       return;
     }
     
@@ -47,8 +69,6 @@ export function AddProductForm({ onSave, onCancel }: { onSave: () => void; onCan
 
     try {
       let finalThumbnailUrl = "";
-
-      // Jeśli dodano zdjęcie, najpierw je przesyłamy
       if (imageFile || imageUrl) {
           const formData = new FormData();
           if (imageFile) {
@@ -69,11 +89,11 @@ export function AddProductForm({ onSave, onCancel }: { onSave: () => void; onCan
           finalThumbnailUrl = uploadResult.thumbnailUrl;
       }
 
-      // Następnie wysyłamy wszystkie dane do naszego głównego endpointu
       const productData = { 
           name, 
           sourceUrl, 
-          thumbnailUrl: finalThumbnailUrl 
+          thumbnailUrl: finalThumbnailUrl,
+          category: categoryId,
       };
 
       const productResponse = await fetch('/api/products', {
@@ -113,6 +133,19 @@ export function AddProductForm({ onSave, onCancel }: { onSave: () => void; onCan
           <div>
             <label className="block text-sm font-medium text-white/80 mb-2">Link do produktu (1688, Taobao, Weidian) *</label>
             <Input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="Wklej link..." className="bg-white/5 border-white/10"/>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Kategoria *</label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger className="w-full bg-white/5 border-white/10">
+                    <SelectValue placeholder="Wybierz kategorię..." />
+                </SelectTrigger>
+                <SelectContent>
+                    {categories.map(cat => (
+                        <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
           </div>
           <div>
              <label className="block text-sm font-medium text-white/80 mb-2">Zdjęcie główne</label>
