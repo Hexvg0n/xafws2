@@ -5,13 +5,22 @@ import { authOptions } from '../../auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import ProductModel from '@/models/Product';
 import mongoose from 'mongoose';
+import { promises as fs } from 'fs';
+import path from 'path';
 
-interface Params {
-    params: { id: string }
-}
+// Funkcja pomocnicza do bezpiecznego usuwania pliku
+const deleteFile = async (filePath: string) => {
+    try {
+        const fullPath = path.join(process.cwd(), 'public', filePath);
+        await fs.unlink(fullPath);
+    } catch (error) {
+        console.warn(`Nie udało się usunąć pliku: ${filePath}`, error);
+    }
+};
 
 // --- FUNKCJA PATCH (EDYCJA) ---
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+    // ... (ta funkcja pozostaje bez zmian)
     const session = await getServerSession(authOptions);
     if (!session?.user || !['admin', 'root'].includes(session.user.role)) {
         return NextResponse.json({ error: 'Brak uprawnień' }, { status: 403 });
@@ -23,13 +32,11 @@ export async function PATCH(req: Request, { params }: Params) {
 
     try {
         const body = await req.json();
-        const { name, sourceUrl, shopInfo } = body;
-
         await dbConnect();
         
         const updatedProduct = await ProductModel.findByIdAndUpdate(
             params.id,
-            { name, sourceUrl, shopInfo },
+            body,
             { new: true, runValidators: true }
         );
 
@@ -46,7 +53,7 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 // --- FUNKCJA DELETE (USUWANIE) ---
-export async function DELETE(req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.role || !['admin', 'root'].includes(session.user.role)) {
         return NextResponse.json({ error: 'Brak uprawnień' }, { status: 403 });
@@ -58,13 +65,28 @@ export async function DELETE(req: Request, { params }: Params) {
 
     try {
         await dbConnect();
-        const deletedProduct = await ProductModel.findByIdAndDelete(params.id);
+        
+        // ZNAJDŹ PRODUKT PRZED USUNIĘCIEM, ABY UZYSKAĆ ŚCIEŻKI DO ZDJĘĆ
+        const productToDelete = await ProductModel.findById(params.id);
 
-        if (!deletedProduct) {
+        if (!productToDelete) {
             return NextResponse.json({ error: "Nie znaleziono produktu do usunięcia." }, { status: 404 });
         }
 
-        return NextResponse.json({ message: "Produkt został pomyślnie usunięty." }, { status: 200 });
+        // USUŃ POWIĄZANE ZDJĘCIA
+        if (productToDelete.thumbnailUrl) {
+            await deleteFile(productToDelete.thumbnailUrl);
+        }
+        if (productToDelete.mainImages && productToDelete.mainImages.length > 0) {
+            for (const imageUrl of productToDelete.mainImages) {
+                await deleteFile(imageUrl);
+            }
+        }
+        
+        // USUŃ PRODUKT Z BAZY DANYCH
+        await ProductModel.findByIdAndDelete(params.id);
+
+        return NextResponse.json({ message: "Produkt i powiązane zdjęcia zostały pomyślnie usunięte." }, { status: 200 });
 
     } catch (error) {
         console.error("Błąd podczas usuwania produktu:", error);

@@ -10,7 +10,7 @@ export default function HomePage() {
       <EnhancedHeroSection />
       <StatsSection />
       <BentoFeaturesSection />
-      <InfiniteTestimonialsSection />
+      {/* <InfiniteTestimonialsSection /> */}
       <CTASection />
     </div>
   )

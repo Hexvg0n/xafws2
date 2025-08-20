@@ -4,7 +4,8 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import sharp from 'sharp';
 import axios from 'axios';
-
+import { getServerSession } from "next-auth/next";
+import { authOptions } from '../auth/[...nextauth]/route';
 // Funkcja zapewniająca, że folder do zapisu istnieje
 async function ensureDirectoryExistence(filePath: string) {
     const dirname = path.dirname(filePath);
@@ -16,6 +17,10 @@ async function ensureDirectoryExistence(filePath: string) {
 }
 
 export async function POST(req: Request) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+        return NextResponse.json({ error: 'Brak autoryzacji' }, { status: 401 });
+    }
     try {
         const formData = await req.formData();
         const file = formData.get('file') as File | null;

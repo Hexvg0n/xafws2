@@ -109,7 +109,13 @@ export function QCChecker() {
         if (!response.ok) {
             throw new Error(data.error || "Wystąpił nieznany błąd");
         }
-        setQcGroups(data);
+        
+        let allQcGroups: QcGroup[] = [];
+        if (data.cnfans && data.cnfans.qc_data && data.cnfans.qc_data.data) {
+            allQcGroups = [...allQcGroups, ...data.cnfans.qc_data.data];
+        }
+
+        setQcGroups(allQcGroups);
     } catch (err) {
         setError((err as Error).message);
     } finally {
@@ -176,13 +182,12 @@ export function QCChecker() {
                                 className="group-hover:scale-105 transition-transform duration-300"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                            <div className="absolute bottom-4 left-4 text-white">
-                                <p className="font-semibold" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(group.order_no.replace(/\*\*\*\*/, '...')) }}></p>
-                                <p className="text-sm text-white/70 flex items-center gap-1.5">
-                                    <ImageIcon className="w-4 h-4" />
-                                    {group.image_list.length} zdjęć
-                                </p>
-                            </div>
+                              <div className="absolute bottom-4 left-4 text-white">
+                                  <p className="text-sm text-white/70 flex items-center gap-1.5">
+                                      <ImageIcon className="w-4 h-4" />
+                                      {group.image_list.length} zdjęć
+                                  </p>
+                              </div>
                         </div>
                     </motion.div>
                 ))}

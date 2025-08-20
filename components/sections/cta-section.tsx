@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { ArrowRight, Sparkles, Users, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MagneticButton } from "@/components/ui/magnetic-button"
+import Link from "next/link"
 
 export function CTASection() {
   return (
@@ -43,8 +44,7 @@ export function CTASection() {
               Gotowy na <span className="gradient-text">przygodę</span> z replikami?
             </h2>
             <p className="text-lg text-white/70 max-w-2xl mx-auto">
-              Dołącz do XaffReps już dziś i odkryj świat najwyższej jakości replik. Bezpłatne członkostwo,
-              nieograniczony dostęp do wszystkich funkcji.
+              Dołącz do XaffReps już dziś i odkryj świat najwyższej jakości replik. 
             </p>
           </motion.div>
 
@@ -57,20 +57,26 @@ export function CTASection() {
           >
             <MagneticButton>
               <Button
+                asChild
                 size="lg"
                 className="bg-gradient-to-r from-emerald-600 to-emerald-400 hover:from-emerald-700 hover:to-emerald-500 text-white font-semibold px-8 py-4 rounded-lg transition-all duration-200 group text-lg"
               >
-                Dołącz za Darmo
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                <Link href="https://discord.gg/xaffreps" target="_blank" rel="noopener noreferrer">
+                  Dołącz już dzisiaj
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </Button>
             </MagneticButton>
 
             <Button
+              asChild
               variant="outline"
               size="lg"
               className="border-white/20 text-white hover:bg-white/10 px-8 py-4 rounded-lg bg-transparent text-lg"
             >
-              Dowiedz się więcej
+              <Link href="/how-to">
+                Dowiedz się więcej
+              </Link>
             </Button>
           </motion.div>
 

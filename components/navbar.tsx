@@ -8,6 +8,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession, signOut, signIn } from "next-auth/react";
 import { Menu, X, User, LogOut, Shield, Loader2, Heart } from "lucide-react";
+import { SiDiscord } from "react-icons/si";
 import { useWishlist } from "./context/WishlistProvider";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,7 +25,6 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { Icons } from "@/components/ui/icons";
 
 const navItems = [
   { name: "W2C", href: "/w2c" },
@@ -144,7 +144,7 @@ export function Navbar() {
               </>
             ) : (
               <Button onClick={handleLogin} disabled={isLoggingIn} className="bg-gradient-to-r from-emerald-600 to-emerald-400 hover:from-emerald-700 hover:to-emerald-500">
-                {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Icons.discord className="w-5 h-5 mr-2" />Zaloguj przez Discord</>}
+                {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : <><SiDiscord className="w-5 h-5 mr-2" />Zaloguj przez Discord</>}
               </Button>
             )}
           </div>
@@ -164,14 +164,36 @@ export function Navbar() {
                   {item.name}
                 </Link>
               ))}
-              <div className="pt-4 border-t border-white/10">
+              <div className="pt-4 border-t border-white/10 space-y-2">
                 {session ? (
-                    <Button onClick={() => signOut({ callbackUrl: '/' })} className="w-full bg-red-600 hover:bg-red-700">
-                      <LogOut className="w-4 h-4 mr-2" /> Wyloguj
-                    </Button>
+                    <>
+                      {/* ZMIANA: Dodane linki do panelu i profilu */}
+                      {(userRole === 'admin' || userRole === 'root' || userRole === 'adder') && (
+                          <Button asChild variant="ghost" className="w-full justify-start text-white/70 hover:text-white py-2 h-auto" onClick={() => setIsOpen(false)}>
+                              <Link href="/dashboard"><Shield className="w-5 h-5 mr-3" />Panel</Link>
+                          </Button>
+                      )}
+                      <Button asChild variant="ghost" className="w-full justify-start text-white/70 hover:text-white py-2 h-auto" onClick={() => setIsOpen(false)}>
+                          <Link href="/profile"><User className="w-5 h-5 mr-3" />Profil</Link>
+                      </Button>
+                       <Button asChild variant="ghost" className="w-full justify-start text-white/70 hover:text-white py-2 h-auto" onClick={() => setIsOpen(false)}>
+                          <Link href="/profile" className="flex items-center justify-between w-full">
+                            <div className="flex items-center">
+                                <Heart className="w-5 h-5 mr-3" />
+                                <span>Ulubione</span>
+                            </div>
+                            {totalFavorites > 0 && (
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">{totalFavorites}</span>
+                            )}
+                          </Link>
+                      </Button>
+                      <Button onClick={() => { signOut({ callbackUrl: '/' }); setIsOpen(false); }} className="w-full bg-red-600/80 hover:bg-red-600 text-white justify-start py-2 h-auto">
+                        <LogOut className="w-5 h-5 mr-3" /> Wyloguj
+                      </Button>
+                    </>
                 ) : (
                     <Button onClick={handleLogin} disabled={isLoggingIn} className="w-full bg-gradient-to-r from-emerald-600 to-emerald-400">
-                       {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Icons.discord className="w-5 h-5 mr-2" /> Zaloguj się przez Discord</>}
+                       {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : <><SiDiscord className="w-5 h-5 mr-2" /> Zaloguj się przez Discord</>}
                     </Button>
                 )}
               </div>

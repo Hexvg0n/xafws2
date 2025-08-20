@@ -1,4 +1,4 @@
-// app/api/qc/route.ts (teraz służy do pobierania danych produktu)
+// app/api/qc/route.ts
 
 import { NextResponse } from 'next/server';
 import axios from 'axios';
@@ -10,23 +10,20 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'URL jest wymagany.' }, { status: 400 });
         }
 
-        // Zmieniamy URL na ten do pobierania danych produktu
         const encodedUrl = encodeURIComponent(url);
-        const apiResponse = await axios.get(`https://dev.vectoreps.pl/api/api/link-parser?url=${encodedUrl}`);
+        const apiResponse = await axios.get(`https://dev.vectoreps.pl/api/api/qc?url=${encodedUrl}`);
         
         const data = apiResponse.data;
 
-        // Sprawdzamy, czy odpowiedź z API jest poprawna
-        if (apiResponse.status !== 200 || !data.ItemID) {
+        if (apiResponse.status !== 200) {
             const errorMessage = data.error || "Nie udało się pobrać danych dla tego linku.";
-            return NextResponse.json({ error: errorMessage }, { status: 404 });
+            return NextResponse.json({ error: errorMessage }, { status: apiResponse.status });
         }
 
-        // Zwracamy wszystkie pobrane dane
         return NextResponse.json(data, { status: 200 });
 
     } catch (error) {
-        console.error("Błąd w API /api/qc (product-data):", error);
+        console.error("Błąd w API /api/qc:", error);
         return NextResponse.json({ error: 'Wystąpił wewnętrzny błąd serwera.' }, { status: 500 });
     }
 }

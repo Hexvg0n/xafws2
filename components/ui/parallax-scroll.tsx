@@ -3,10 +3,12 @@
 import { useRef } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import Image from "next/image"
+import Link from "next/link" // Dodajemy import Link
 import { cn } from "@/lib/utils"
 
 interface ParallaxScrollProps {
-  images: string[]
+  // Zmieniamy typ, aby akceptować obiekty ze ścieżką, id i typem
+  images: { src: string; id: string; type: 'product' | 'batch' }[];
   className?: string
 }
 
@@ -26,45 +28,39 @@ export function ParallaxScroll({ images, className }: ParallaxScrollProps) {
   const secondPart = images.slice(third, 2 * third)
   const thirdPart = images.slice(2 * third)
 
+  const renderImage = (item: { src: string; id: string; type: 'product' | 'batch' }) => (
+    <Link href={item.type === 'batch' ? `/bb/${item.id}` : `/w2c/${item.id}`} className="block w-full h-full">
+      <Image
+        src={item.src || "/placeholder.svg"}
+        className="h-full w-full object-cover rounded-lg aspect-square"
+        height="400"
+        width="400"
+        alt="thumbnail"
+      />
+    </Link>
+  );
+
   return (
-    <div className={cn("h-[40rem] items-start overflow-hidden", className)} ref={gridRef}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-start max-w-5xl mx-auto gap-10 py-40 px-10">
+    <div className={cn("h-[40rem] items-start overflow-y-auto", className)} ref={gridRef}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-start max-w-7xl mx-auto gap-10">
         <div className="grid gap-10">
-          {firstPart.map((el, idx) => (
+          {firstPart.map((item, idx) => (
             <motion.div style={{ y: translateFirst }} key={"grid-1" + idx}>
-              <Image
-                src={el || "/placeholder.svg"}
-                className="h-80 w-full object-cover object-left-top rounded-lg gap-10 !m-0 !p-0"
-                height="400"
-                width="400"
-                alt="thumbnail"
-              />
+              {renderImage(item)}
             </motion.div>
           ))}
         </div>
         <div className="grid gap-10">
-          {secondPart.map((el, idx) => (
+          {secondPart.map((item, idx) => (
             <motion.div style={{ y: translateSecond }} key={"grid-2" + idx}>
-              <Image
-                src={el || "/placeholder.svg"}
-                className="h-80 w-full object-cover object-left-top rounded-lg gap-10 !m-0 !p-0"
-                height="400"
-                width="400"
-                alt="thumbnail"
-              />
+              {renderImage(item)}
             </motion.div>
           ))}
         </div>
         <div className="grid gap-10">
-          {thirdPart.map((el, idx) => (
+          {thirdPart.map((item, idx) => (
             <motion.div style={{ y: translateThird }} key={"grid-3" + idx}>
-              <Image
-                src={el || "/placeholder.svg"}
-                className="h-80 w-full object-cover object-left-top rounded-lg gap-10 !m-0 !p-0"
-                height="400"
-                width="400"
-                alt="thumbnail"
-              />
+              {renderImage(item)}
             </motion.div>
           ))}
         </div>
