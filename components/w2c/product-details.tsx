@@ -15,7 +15,7 @@ import {
   Store,
   Loader2,
   AlertTriangle,
-  Star, // <-- Dodany import
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +49,6 @@ type Product = {
   batch?: string; // Pole na nazwę batcha
 };
 
-// Zmiana: Uproszczono propsy, komponent jest teraz w pełni zależny od globalnego stanu
 export function ProductDetails({ product }: { product: Product }) {
   const [selectedImage, setSelectedImage] = useState(product.thumbnailUrl || product.mainImages?.[0] || "/placeholder.svg");
   const { data: session } = useSession();
@@ -62,7 +61,8 @@ export function ProductDetails({ product }: { product: Product }) {
   const [showLoginAlert, setShowLoginAlert] = useState(false);
 
   useEffect(() => {
-    setIsFavorited(wishlist.some(item => item._id === product._id));
+    // Poprawka: Sprawdzamy tablicę `wishlist.products`
+    setIsFavorited(wishlist.products.some(item => item._id === product._id));
   }, [wishlist, product._id]);
 
   const handleFavoriteClick = async () => {
@@ -71,7 +71,8 @@ export function ProductDetails({ product }: { product: Product }) {
       return;
     }
     setIsFavoriteLoading(true);
-    await toggleFavorite(product);
+    // Poprawka: Przekazujemy typ 'product'
+    await toggleFavorite(product, 'product');
     setIsFavoriteLoading(false);
   };
 
