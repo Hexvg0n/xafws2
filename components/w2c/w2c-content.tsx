@@ -97,9 +97,10 @@ export function W2CContent() {
               className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white"
             />
           </div>
-          <div className="flex items-center space-x-4">
+          {/* ##### ZMIANY ZNAJDUJĄ SIĘ PONIŻEJ ##### */}
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full md:w-[180px] bg-white/5 border-white/10">
+                <SelectTrigger className="w-full sm:w-auto bg-white/5 border-white/10">
                     <SelectValue placeholder="Filtruj po kategorii..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -109,13 +110,18 @@ export function W2CContent() {
                     ))}
                 </SelectContent>
             </Select>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white">
-              <option value="createdAt">Sortuj: Najnowsze</option>
-              <option value="price-low">Sortuj: Cena rosnąco</option>
-              <option value="price-high">Sortuj: Cena malejąco</option>
-              <option value="hearts">Sortuj: Polubienia</option>
-              <option value="views">Sortuj: Wyświetlenia</option>
-            </select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full sm:w-auto bg-white/5 border-white/10">
+                  <SelectValue placeholder="Sortuj..." />
+              </SelectTrigger>
+              <SelectContent>
+                  <SelectItem value="createdAt">Sortuj: Najnowsze</SelectItem>
+                  <SelectItem value="price-low">Sortuj: Cena rosnąco</SelectItem>
+                  <SelectItem value="price-high">Sortuj: Cena malejąco</SelectItem>
+                  <SelectItem value="hearts">Sortuj: Polubienia</SelectItem>
+                  <SelectItem value="views">Sortuj: Wyświetlenia</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="flex items-center space-x-2">
               <Button variant={viewMode === "grid" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("grid")} className={viewMode === "grid" ? "bg-emerald-500" : "text-white/60"}><Grid className="w-4 h-4" /></Button>
               <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("list")} className={viewMode === "list" ? "bg-emerald-500" : "text-white/60"}><List className="w-4 h-4" /></Button>
