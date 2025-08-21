@@ -74,7 +74,7 @@ const middlemen: Record<string, Middleman> = {
   },
   kakobuy: {
     name: "Kakobuy",
-    template: "https://www.kakobuy.com/item/details?url={{encodedUrl}}&affcode=dripez",
+    template: "https://www.kakobuy.com/item/details?url={{encodedUrl}}",
     platformMapping: {
       taobao: "item.taobao.com",
       "1688": "detail.1688.com",
@@ -86,7 +86,7 @@ const middlemen: Record<string, Middleman> = {
   },
   superbuy: {
     name: "Superbuy",
-    template: "https://www.superbuy.com/en/page/buy/?url={{encodedUrl}}&partnercode=EiE9aB",
+    template: "https://www.superbuy.com/en/page/buy/?url={{encodedUrl}}",
     platformMapping: {
       taobao: "item.taobao.com",
       "1688": "detail.1688.com",
@@ -98,7 +98,7 @@ const middlemen: Record<string, Middleman> = {
   },
   cssbuy: {
     name: "CSSBuy",
-    template: "https://cssbuy.com/item{{cssPlatform}}{{itemID}}.html?promotionCode=90622f541f98cd81",
+    template: "https://cssbuy.com/item{{cssPlatform}}{{itemID}}.html",
     platformMapping: {
       taobao: "-taobao-",
       "1688": "-1688-",
@@ -116,7 +116,7 @@ const middlemen: Record<string, Middleman> = {
   },
   allchinabuy: {
     name: "AllChinaBuy",
-    template: "https://www.allchinabuy.com/en/page/buy/?url={{encodedUrl}}&partnercode=wVK3gY",
+    template: "https://www.allchinabuy.com/en/page/buy/?url={{encodedUrl}}",
     platformMapping: {
       taobao: "item.taobao.com",
       "1688": "detail.1688.com",
@@ -152,7 +152,7 @@ const middlemen: Record<string, Middleman> = {
   },
   cnfans: {
     name: "CNFans",
-    template: "https://cnfans.com/product/?shop_type={{platformDomain}}&id={{itemID}}&ref=191373",
+    template: "https://cnfans.com/product/?shop_type={{platformDomain}}&id={{itemID}}",
     platformMapping: {
       taobao: "taobao",
       "1688": "ali_1688",
@@ -170,7 +170,7 @@ const middlemen: Record<string, Middleman> = {
   },
   joyabuy: {
     name: "Joyabuy",
-    template: "https://joyabuy.com/product/?shop_type={{platformDomain}}&id={{itemID}}&ref=300312245",
+    template: "https://joyabuy.com/product/?shop_type={{platformDomain}}&id={{itemID}}",
     platformMapping: {
       taobao: "taobao",
       "1688": "ali_1688",
@@ -182,7 +182,7 @@ const middlemen: Record<string, Middleman> = {
   },
   mulebuy: {
     name: "Mulebuy",
-    template: "https://mulebuy.com/product/?shop_type={{platformDomain}}&id={{itemID}}&ref=200345641",
+    template: "https://mulebuy.com/product/?shop_type={{platformDomain}}&id={{itemID}}",
     platformMapping: {
       taobao: "taobao",
       "1688": "ali_1688",
@@ -194,7 +194,7 @@ const middlemen: Record<string, Middleman> = {
   },
   hoobuy: {
     name: "HooBuy",
-    template: "https://hoobuy.com/product/{{platformCode}}/{{itemID}}?inviteCode=w8ow9ZB8",
+    template: "https://hoobuy.com/product/{{platformCode}}/{{itemID}}",
     platformMapping: {
       '0': 'detail.1688.com',
       '1': 'item.taobao.com',
