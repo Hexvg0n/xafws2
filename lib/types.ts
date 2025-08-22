@@ -28,6 +28,7 @@ export type Product = {
   };
   views?: number;
   favorites?: number;
+  category?: string; 
 };
 
 export type Seller = {

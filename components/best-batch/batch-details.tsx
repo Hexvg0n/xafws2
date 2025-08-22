@@ -1,5 +1,3 @@
-// components/best-batch/batch-details.tsx
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -159,7 +157,7 @@ export function BatchDetails({ batch }: { batch: Batch }) {
         {sanitizedDescriptionHTML && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-morphism rounded-2xl p-8 mt-8">
             <h2 className="text-2xl font-bold text-white mb-4">Opis od sprzedawcy</h2>
-            <div className="prose prose-sm md:prose-base prose-invert max-w-none [&_img]:rounded-lg" dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHTML }} />
+            <div className="prose prose-sm md:prose-base prose-invert max-w-none prose-images-responsive" dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHTML }} />
           </motion.div>
         )}
       </div>

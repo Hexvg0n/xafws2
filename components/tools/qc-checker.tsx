@@ -13,7 +13,6 @@ interface QcGroup {
   image_list: string[];
 }
 
-// Komponent dla modalu z galerią zdjęć
 function QcGalleryModal({ group, onClose }: { group: QcGroup; onClose: () => void }) {
     const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -30,21 +29,22 @@ function QcGalleryModal({ group, onClose }: { group: QcGroup; onClose: () => voi
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            // ZMIANA 1: z-50 -> z-[100]
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
             onClick={onClose}
         >
             <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                className="relative w-full max-w-4xl h-[80vh]" // Ustawiamy wysokość kontenera
+                className="relative w-full max-w-4xl h-[80vh]"
                 onClick={(e) => e.stopPropagation()}
             >
-                <Button onClick={onClose} variant="ghost" size="icon" className="absolute -top-10 right-0 text-white/70 hover:text-white z-10">
+                {/* ZMIANA 2: Zmieniono pozycję przycisku */}
+                <Button onClick={onClose} variant="ghost" size="icon" className="absolute top-4 right-4 text-white/70 hover:text-white z-10 bg-black/20 hover:bg-black/40 rounded-full">
                     <X className="w-6 h-6" />
                 </Button>
                 
-                {/* KLUCZOWA ZMIANA: Dodajemy position: relative do kontenera obrazka */}
                 <div className="relative w-full h-full">
                     <AnimatePresence mode="wait">
                          <motion.div
@@ -59,7 +59,7 @@ function QcGalleryModal({ group, onClose }: { group: QcGroup; onClose: () => voi
                                 src={group.image_list[currentIndex]}
                                 alt={`QC Image ${currentIndex + 1}`}
                                 layout="fill"
-                                objectFit="contain" // Używamy objectFit zamiast object-fit w klasie
+                                objectFit="contain"
                                 className="rounded-lg"
                             />
                         </motion.div>
@@ -67,10 +67,10 @@ function QcGalleryModal({ group, onClose }: { group: QcGroup; onClose: () => voi
                 </div>
 
                 {/* Przyciski nawigacyjne */}
-                <Button onClick={handlePrev} variant="ghost" size="icon" className="absolute left-0 top-1/2 -translate-y-1/2 sm:-translate-x-12 bg-white/10 hover:bg-white/20">
+                <Button onClick={handlePrev} variant="ghost" size="icon" className="absolute left-0 top-1/2 -translate-y-1/2 sm:-translate-x-12 bg-white/10 hover:bg-white/20 rounded-full">
                     <ChevronLeft className="w-6 h-6" />
                 </Button>
-                <Button onClick={handleNext} variant="ghost" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2 sm:translate-x-12 bg-white/10 hover:bg-white/20">
+                <Button onClick={handleNext} variant="ghost" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2 sm:translate-x-12 bg-white/10 hover:bg-white/20 rounded-full">
                     <ChevronRight className="w-6 h-6" />
                 </Button>
 

@@ -46,7 +46,8 @@ type Product = {
   shopInfo?: {
     ShopName?: string;
   };
-  batch?: string; // Pole na nazwę batcha
+  batch?: string;
+  category?: string;
 };
 
 export function ProductDetails({ product }: { product: Product }) {
@@ -61,7 +62,6 @@ export function ProductDetails({ product }: { product: Product }) {
   const [showLoginAlert, setShowLoginAlert] = useState(false);
 
   useEffect(() => {
-    // Poprawka: Sprawdzamy tablicę `wishlist.products`
     setIsFavorited(wishlist.products.some(item => item._id === product._id));
   }, [wishlist, product._id]);
 
@@ -71,7 +71,6 @@ export function ProductDetails({ product }: { product: Product }) {
       return;
     }
     setIsFavoriteLoading(true);
-    // Poprawka: Przekazujemy typ 'product'
     await toggleFavorite(product, 'product');
     setIsFavoriteLoading(false);
   };
@@ -175,7 +174,7 @@ export function ProductDetails({ product }: { product: Product }) {
         {sanitizedDescriptionHTML && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-morphism rounded-2xl p-8 mt-8">
             <h2 className="text-2xl font-bold text-white mb-4">Opis od sprzedawcy</h2>
-            <div className="prose prose-sm md:prose-base prose-invert max-w-none [&_img]:rounded-lg" dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHTML }} />
+            <div className="prose prose-sm md:prose-base prose-invert max-w-none prose-images-responsive" dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHTML }} />
           </motion.div>
         )}
       </div>

@@ -29,13 +29,16 @@ export async function POST(req: Request) {
         let imageBuffer: Buffer;
 
         if (file) {
-            // Opcja 1: Przesłano plik
             const fileBuffer = await file.arrayBuffer();
             imageBuffer = Buffer.from(fileBuffer);
         } else if (imageUrl) {
-            // Opcja 2: Podano URL
-            const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-            imageBuffer = Buffer.from(response.data, 'binary');
+            const response = await axios.get(imageUrl, {
+        responseType: 'arraybuffer',
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
+    imageBuffer = Buffer.from(response.data, 'binary');
         } else {
             return NextResponse.json({ error: 'Nie dostarczono pliku ani URL.' }, { status: 400 });
         }

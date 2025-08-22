@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { Product } from "@/lib/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Interfejs dla kategorii, aby TypeScript wiedział, jakiego typu danych się spodziewać
+interface Category {
+  _id: string;
+  name: string;
+}
 
 export function EditProductForm({ onSave, onCancel, productToEdit }: { onSave: () => void; onCancel: () => void; productToEdit: Product }) {
   const [name, setName] = useState(productToEdit.name);
@@ -19,6 +26,26 @@ export function EditProductForm({ onSave, onCancel, productToEdit }: { onSave: (
   const [imageUrl, setImageUrl] = useState("");
   const initialPreview = productToEdit.thumbnailUrl || productToEdit.mainImages?.[0] || null;
   const [imagePreview, setImagePreview] = useState<string | null>(initialPreview);
+
+  // --- NOWY KOD START ---
+  const [categoryId, setCategoryId] = useState<string | undefined>(productToEdit.category);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+        try {
+            const res = await fetch('/api/categories');
+            if (res.ok) {
+                setCategories(await res.json());
+            }
+        } catch (error) {
+            console.error("Błąd pobierania kategorii", error);
+        }
+    };
+    fetchCategories();
+  }, []);
+  // --- NOWY KOD KONIEC ---
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -58,7 +85,8 @@ export function EditProductForm({ onSave, onCancel, productToEdit }: { onSave: (
       const response = await fetch(`/api/products/${productToEdit._id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, sourceUrl, thumbnailUrl: finalThumbnailUrl }),
+        // Zaktualizowano body, aby zawierało kategorię
+        body: JSON.stringify({ name, sourceUrl, thumbnailUrl: finalThumbnailUrl, category: categoryId }),
       });
 
       if (!response.ok) throw new Error((await response.json()).error || 'Błąd serwera');
@@ -88,6 +116,23 @@ export function EditProductForm({ onSave, onCancel, productToEdit }: { onSave: (
             <label className="block text-sm font-medium text-white/80 mb-2">Link źródłowy</label>
             <Input type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} required className="bg-white/5 border-white/10"/>
           </div>
+          
+          {/* --- NOWY KOD START --- */}
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Kategoria</label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger className="w-full bg-white/5 border-white/10">
+                    <SelectValue placeholder="Wybierz kategorię..." />
+                </SelectTrigger>
+                <SelectContent>
+                    {categories.map(cat => (
+                        <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </div>
+          {/* --- NOWY KOD KONIEC --- */}
+
           <div>
              <label className="block text-sm font-medium text-white/80 mb-2">Zmień zdjęcie główne</label>
              <Tabs defaultValue="upload" className="w-full">

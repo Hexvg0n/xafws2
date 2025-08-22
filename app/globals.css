@@ -8,6 +8,8 @@
   --font-geist-sans: "Geist Sans", sans-serif;
 }
 
+
+
 * {
   margin: 0;
   padding: 0;
@@ -27,6 +29,10 @@ body {
   }
 }
 @layer utilities {
+  .prose-images-responsive img {
+    @apply max-w-full h-auto object-contain rounded-lg;
+  }
+  
   .glass-morphism {
     @apply bg-white/5 backdrop-blur-md border border-white/10;
   }
