@@ -1,87 +1,87 @@
 // app/api/upload/route.ts
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
-import sharp from 'sharp';
-import axios from 'axios';
+import { v2 as cloudinary } from 'cloudinary';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from '../auth/[...nextauth]/route';
 
-// Funkcja zapewniająca, że folder do zapisu istnieje
-async function ensureDirectoryExistence(filePath: string) {
-    const dirname = path.dirname(filePath);
-    try {
-        await fs.access(dirname);
-    } catch (e) {
-        // Jeśli folder nie istnieje, utwórz go rekursywnie
-        await fs.mkdir(dirname, { recursive: true });
-    }
-}
+// Konfiguracja Cloudinary przy użyciu zmiennych środowiskowych
+// Te klucze są bezpieczne, ponieważ ten kod wykonuje się tylko na serwerze.
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
+});
 
 export async function POST(req: Request) {
+    // === SEKCJA 1: UWIERZYTELNIANIE I AUTORYZACJA ===
     const session = await getServerSession(authOptions);
-    if (!session) {
-        return NextResponse.json({ error: 'Brak autoryzacji' }, { status: 401 });
+    const userRole = session?.user?.role;
+
+    // Sprawdzamy, czy użytkownik jest zalogowany i ma odpowiednią rolę
+    if (!session || !userRole || !['admin', 'root', 'adder'].includes(userRole)) {
+        return NextResponse.json({ error: 'Brak uprawnień do przesyłania plików.' }, { status: 403 }); // 403 Forbidden
     }
+
     try {
         const formData = await req.formData();
         const file = formData.get('file') as File | null;
         const imageUrl = formData.get('imageUrl') as string | null;
 
-        let imageBuffer: Buffer;
+        let uploadResult;
 
+        // === SEKCJA 2: PRZETWARZANIE I WYSYŁANIE PLIKU ===
         if (file) {
-            console.log('Otrzymano plik:', file.name);
+            // --- DODATKOWE ZABEZPIECZENIE: Sprawdzenie rozmiaru pliku ---
+            const MAX_FILE_SIZE_MB = 5;
+            if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+                return NextResponse.json({ error: `Plik jest za duży. Maksymalny rozmiar to ${MAX_FILE_SIZE_MB} MB.` }, { status: 413 }); // 413 Payload Too Large
+            }
+
+            // Jeśli przesyłamy plik, zamieniamy go na bufor i wysyłamy do Cloudinary
             const fileBuffer = await file.arrayBuffer();
-            imageBuffer = Buffer.from(fileBuffer);
-        } else if (imageUrl) {
-            console.log('Otrzymano URL:', imageUrl);
-            const response = await axios.get(imageUrl, {
-                responseType: 'arraybuffer',
-                headers: {
-                    // Dodano User-Agent, aby uniknąć blokowania przez niektóre serwery
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                }
+            const buffer = Buffer.from(fileBuffer);
+            
+            uploadResult = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    {
+                        folder: "xaffreps_products", // Opcjonalnie: folder w Cloudinary do organizacji
+                        resource_type: "auto", // Automatycznie wykryj typ pliku
+                    },
+                    (error, result) => {
+                        if (error) {
+                            console.error("Błąd streamu Cloudinary:", error);
+                            reject(error);
+                        };
+                        resolve(result);
+                    }
+                );
+                uploadStream.end(buffer);
             });
-            imageBuffer = Buffer.from(response.data, 'binary');
+
+        } else if (imageUrl) {
+            // Jeśli mamy URL, Cloudinary może pobrać obrazek bezpośrednio z tego linku
+            uploadResult = await cloudinary.uploader.upload(imageUrl, {
+                folder: "xaffreps_products",
+                resource_type: "image",
+            });
         } else {
             return NextResponse.json({ error: 'Nie dostarczono pliku ani URL.' }, { status: 400 });
         }
 
-        console.log('Przetwarzanie obrazu za pomocą Sharp...');
-        const processedImageBuffer = await sharp(imageBuffer)
-            .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-            .webp({ quality: 80 })
-            .toBuffer();
-        console.log('Przetwarzanie obrazu zakończone.');
+        // === SEKCJA 3: ZWROT ODPOWIEDZI ===
+        // Cloudinary zwraca obiekt z wieloma informacjami, w tym bezpiecznym URL
+        const secureUrl = (uploadResult as any)?.secure_url;
 
-        // Zapisanie pliku na serwerze
-        const filename = `product-${Date.now()}.webp`;
-        const uploadsDir = path.join(process.cwd(), 'public/uploads');
-        const filePath = path.join(uploadsDir, filename);
-        
-        // ----> LOG DO DEBUGOWANIA <----
-        // Sprawdź w logach serwera, czy ta ścieżka jest poprawna
-        console.log('Ścieżka zapisu pliku na serwerze:', filePath);
+        if (!secureUrl) {
+            throw new Error("Nie udało się uzyskać bezpiecznego URL z Cloudinary po pomyślnym przesłaniu.");
+        }
 
-        await ensureDirectoryExistence(filePath);
-        await fs.writeFile(filePath, processedImageBuffer);
-
-        console.log('Plik zapisany pomyślnie.');
-
-        // Zwrócenie publicznego URL do zapisanego pliku
-        const publicUrl = `/uploads/${filename}`;
-
-        // ----> LOG DO DEBUGOWANIA <----
-        // Sprawdź, czy ten URL jest poprawnie zwracany do frontendu
-        console.log('Zwracany publiczny URL:', publicUrl);
-
-        return NextResponse.json({ thumbnailUrl: publicUrl });
+        return NextResponse.json({ thumbnailUrl: secureUrl });
 
     } catch (error) {
-        // ----> LOG DO DEBUGOWANIA <----
-        // Ten log pokaże dokładny błąd, jeśli wystąpi w bloku try
-        console.error('Błąd podczas przesyłania obrazu:', error);
+        const errorMessage = error instanceof Error ? error.message : "Wystąpił nieznany błąd";
+        console.error('Błąd podczas przesyłania obrazu do Cloudinary:', errorMessage);
         return NextResponse.json({ error: 'Błąd serwera podczas przetwarzania obrazu.' }, { status: 500 });
     }
 }
