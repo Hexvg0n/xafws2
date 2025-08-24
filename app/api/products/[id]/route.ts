@@ -98,7 +98,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
         await ProductModel.findByIdAndDelete(params.id);
 
         // KROK 3: Odśwież cache dla strony głównej
-        revalidatePath('/'); // Mówi Next.js, żeby pobrał świeże dane dla strony głównej
+        revalidatePath('/'); // Mówi Next.js, żeby pobrał świeże dane dla strony głównej    
 
         return NextResponse.json({ message: "Produkt i powiązane zdjęcie zostały pomyślnie usunięte." }, { status: 200 });
 

@@ -14,10 +14,43 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "XaffReps - Premium Replica Community",
-  description: "The ultimate destination for high-quality replica reviews, batches, and community insights.",
-  keywords: ["replica", "fashion", "reviews", "community", "batches"],
-    generator: 'v0.dev'
+  // Podstawowe informacje
+  title: "XaffReps - Najlepsze polskie rep community",
+  description: "Szukaj itemów, znajdź najlepszy batch, sprawdź szybko item lub przekonwertuj link. Wszystko w jednym miejscu.",
+  keywords: ["replica", "fashion", "reviews", "community", "batches", "repy", "w2c", "best batch"],
+  
+  // Informacje Open Graph (dla Discord, Facebook itp.)
+  openGraph: {
+    title: "XaffReps - Najlepsze polskie rep community",
+    description: "Wszystko, czego potrzebujesz w jednym miejscu.",
+    url: "https://xaffreps.xyz", // WAŻNE: Wstaw tutaj adres URL swojej strony!
+    siteName: "XaffReps",
+    images: [
+      {
+        url: "/og-image.png", 
+        width: 1200,
+        height: 630,
+        alt: "XaffReps - Logo",
+      },
+    ],
+    locale: "pl_PL",
+    type: "website",
+  },
+
+  // Twitter Card (dla lepszego wyświetlania na Twitterze/X)
+  twitter: {
+    card: "summary_large_image",
+    title: "XaffReps - Najlepsze polskie rep community",
+    description: "Wszystko, czego potrzebujesz w świecie replik, w jednym miejscu.",
+    images: ["/og-image.png"], // Ta sama grafika co w Open Graph
+  },
+
+  // Ikony (Favicon)
+  icons: {
+    icon: "/favicon.ico", // Możesz też wskazać /icon.png
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

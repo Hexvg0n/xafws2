@@ -7,6 +7,8 @@ import dbConnect from '@/lib/dbConnect';
 import BatchModel from '@/models/Batch';
 import axios from 'axios';
 import { logHistory } from '@/lib/historyLogger';
+import { revalidatePath } from 'next/cache'; // <-- Ważny import
+
 // Funkcja pomocnicza do parsowania URL
 const parseProductLink = (url: string): { platform: string; itemID: string } | null => {
     try {
@@ -108,6 +110,10 @@ export async function POST(req: Request) {
             createdBy: session.user.id,
         });
         await logHistory(session, 'add', 'batch', newBatch._id.toString(), `dodał batch "${newBatch.name} - ${newBatch.batch}"`);
+        
+        // Odświeżenie strony głównej
+        revalidatePath('/');
+
         return NextResponse.json(newBatch, { status: 201 });
 
     } catch (error) {

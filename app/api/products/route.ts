@@ -6,7 +6,8 @@ import { authOptions } from '../auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import ProductModel from '@/models/Product';
 import axios from 'axios';
-import { logHistory } from '@/lib/historyLogger'; // <<< Nowy import
+import { logHistory } from '@/lib/historyLogger';
+import { revalidatePath } from 'next/cache'; // <-- Ważny import
 
 // Funkcja pomocnicza do parsowania URL (bez zmian)
 const parseProductLink = (url: string): { platform: string; itemID: string } | null => {
@@ -39,7 +40,7 @@ const parseProductLink = (url: string): { platform: string; itemID: string } | n
 // --- FUNKCJA POST (TWORZENIE NOWEGO PRODUKTU) ---
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session.user.name) { // Dodano sprawdzenie session.user.name
+    if (!session?.user?.id || !session.user.name) {
         return NextResponse.json({ error: 'Brak autoryzacji' }, { status: 401 });
     }
 
@@ -106,8 +107,10 @@ export async function POST(req: Request) {
             createdBy: session.user.id,
         });
 
-        // <<< DODANE LOGOWANIE DO HISTORII >>>
         await logHistory(session, 'add', 'product', newProduct._id.toString(), `dodał produkt "${newProduct.name}"`);
+
+        // Odświeżenie strony głównej
+        revalidatePath('/');
 
         return NextResponse.json(newProduct, { status: 201 });
 

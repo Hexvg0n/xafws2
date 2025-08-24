@@ -1,11 +1,14 @@
 // app/api/images/route.ts
 
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
 import dbConnect from '@/lib/dbConnect';
 import ProductModel from '@/models/Product';
 import BatchModel from '@/models/Batch';
+
+// Wyłączamy cachowanie dla tego endpointu, aby mieć pewność, 
+// że zawsze pobieramy świeże dane z bazy.
+// Strona główna będzie miała swój własny cache, którym będziemy zarządzać.
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
@@ -36,8 +39,18 @@ export async function GET() {
                 });
             }
         });
+        
+        // Zwracamy dane z nagłówkiem, który Next.js zrozumie i przypisze do tagu
+        // Zastępujemy NextResponse.json nową logiką
+        return new Response(JSON.stringify({ images: linkedImages }), {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                // To jest kluczowy element do tagowania
+                'Next-Tags': 'homepage-images'
+            }
+        });
 
-        return NextResponse.json({ images: linkedImages });
     } catch (error) {
         console.error("Błąd podczas wczytywania obrazków:", error);
         return NextResponse.json({ error: 'Nie udało się załadować obrazków.' }, { status: 500 });
