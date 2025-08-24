@@ -22,33 +22,35 @@ export const metadata: Metadata = {
   // Informacje Open Graph (dla Discord, Facebook itp.)
   openGraph: {
     title: "XaffReps",
-    description: "Wszystko, czego potrzebujesz w jednym miejscu.",
+    description: "Wszystko, czego potrzebujesz w świecie replik, w jednym miejscu.", // Lepszy, bardziej opisowy description
     url: "https://xaffreps.xyz", 
     siteName: "XaffReps",
     images: [
       {
-        url: "/og-image.png", 
+        url: "https://xaffreps.xyz/og-image.png", // <-- KLUCZOWA ZMIANA
         width: 1200,
         height: 630,
-        alt: "XaffReps - Logo",
+        alt: "XaffReps - Wszystko o replikach w jednym miejscu", // Można dodać bardziej opisowy alt
       },
     ],
     locale: "pl_PL",
     type: "website",
   },
 
-  // Twitter Card (dla lepszego wyświetlania na Twitterze/X)
   twitter: {
     card: "summary_large_image",
     title: "XaffReps - Najlepsze polskie rep community",
     description: "Wszystko, czego potrzebujesz w świecie replik, w jednym miejscu.",
-    images: ["/og-image.png"], // Ta sama grafika co w Open Graph
+    images: ["https://xaffreps.xyz/og-image.png"], // <-- KLUCZOWA ZMIANA
   },
 
   // Ikony (Favicon)
   icons: {
-    icon: "/favicon.ico", 
+    icon: "/favicon.ico", // Favicon może zostać jako ścieżka względna
   },
+  
+
+  metadataBase: new URL('https://xaffreps.xyz'),
 };
 
 export default function RootLayout({
