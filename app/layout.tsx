@@ -15,15 +15,15 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   // Podstawowe informacje
-  title: "XaffReps - Najlepsze polskie rep community",
+  title: "XaffReps",
   description: "Szukaj itemów, znajdź najlepszy batch, sprawdź szybko item lub przekonwertuj link. Wszystko w jednym miejscu.",
   keywords: ["replica", "fashion", "reviews", "community", "batches", "repy", "w2c", "best batch"],
   
   // Informacje Open Graph (dla Discord, Facebook itp.)
   openGraph: {
-    title: "XaffReps - Najlepsze polskie rep community",
+    title: "XaffReps",
     description: "Wszystko, czego potrzebujesz w jednym miejscu.",
-    url: "https://xaffreps.xyz", // WAŻNE: Wstaw tutaj adres URL swojej strony!
+    url: "https://xaffreps.xyz", 
     siteName: "XaffReps",
     images: [
       {
@@ -47,9 +47,7 @@ export const metadata: Metadata = {
 
   // Ikony (Favicon)
   icons: {
-    icon: "/favicon.ico", // Możesz też wskazać /icon.png
-    shortcut: "/favicon-16x16.png",
-    apple: "/apple-touch-icon.png",
+    icon: "/favicon.ico", 
   },
 };
 
