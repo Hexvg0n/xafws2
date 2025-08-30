@@ -49,7 +49,7 @@ export function EnhancedHeroSection() {
                     const data = await imagesRes.json();
                     if (data.images && data.images.length > 0) {
                         const shuffledImages = shuffleArray(data.images);
-                        setHeroImages(shuffledImages.slice(0, 6));
+                        setHeroImages(shuffledImages.slice(0, 15));
                     }
                 }
 

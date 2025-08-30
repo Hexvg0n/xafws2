@@ -7,19 +7,7 @@ import BatchModel from '@/models/Batch';
 import SellerModel from '@/models/Seller';
 import axios from 'axios';
 
-// Cache do przechowywania danych przez 1 godzinę
-let cachedStats: any = null;
-let lastFetch: number = 0;
-const CACHE_DURATION = 60 * 60 * 1000; // 1 godzina w milisekundach
-
 export async function GET() {
-    const now = Date.now();
-
-    // Zwróć dane z cache, jeśli są aktualne
-    if (cachedStats && (now - lastFetch < CACHE_DURATION)) {
-        return NextResponse.json(cachedStats);
-    }
-
     await dbConnect();
 
     try {
@@ -52,10 +40,6 @@ export async function GET() {
             totalItems: totalProducts + totalBatches,
             totalSellers,
         };
-
-        // Zapisz nowe dane do cache
-        cachedStats = stats;
-        lastFetch = now;
 
         return NextResponse.json(stats);
 
