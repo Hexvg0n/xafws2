@@ -25,7 +25,7 @@ const BatchSchema: Schema = new Schema({
     name: { type: String, required: true, trim: true },
     sourceUrl: { type: String, required: true, unique: true },
     thumbnailUrl: { type: String },
-    platform: { type: String, enum: ['1688', 'taobao', 'weidian', 'tmall'] },
+    platform: { type: String, enum: ['1688', 'taobao', 'weidian', 'tmall', 'alibaba'] },
     mainImages: [String],
     description: { type: String },
     priceCNY: { type: Number },

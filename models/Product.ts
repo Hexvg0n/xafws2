@@ -3,19 +3,19 @@
 import mongoose, { Schema } from 'mongoose';
 
 const ProductSchema = new Schema({
-    name: { 
-        type: String, 
-        required: [true, 'Nazwa produktu jest wymagana.'], 
-        trim: true 
+    name: {
+        type: String,
+        required: [true, 'Nazwa produktu jest wymagana.'],
+        trim: true
     },
-    sourceUrl: { 
-        type: String, 
-        required: true, 
-        unique: true 
+    sourceUrl: {
+        type: String,
+        required: true,
+        unique: true
     },
     thumbnailUrl: { type: String },
-    platform: { type: String, enum: ['1688', 'taobao', 'weidian', 'tmall'] },
-    mainImages: [String], 
+    platform: { type: String, enum: ['1688', 'taobao', 'weidian', 'tmall', 'alibaba'] },
+    mainImages: [String],
     description: { type: String },
     priceCNY: { type: Number },
     shopInfo: {
@@ -28,7 +28,7 @@ const ProductSchema = new Schema({
         Width: Number,
         Height: Number,
     },
-    skus: [mongoose.Schema.Types.Mixed], 
+    skus: [mongoose.Schema.Types.Mixed],
     availableColors: [String],
     availableSizes: [String],
     views: { type: Number, default: 0 },
@@ -36,7 +36,7 @@ const ProductSchema = new Schema({
     category: {
         type: Schema.Types.ObjectId,
         ref: 'Category',
-    }, 
+    },
     createdBy: {
         type: Schema.Types.ObjectId,
         ref: 'User',
