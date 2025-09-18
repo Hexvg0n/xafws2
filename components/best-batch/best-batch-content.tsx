@@ -2,21 +2,20 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Search, Grid, List, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BatchCard } from "./batch-card";
 import { useWishlist } from "../context/WishlistProvider";
 import { usePreferences } from "../context/PreferencesProvider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Batch = any;
 
-const ITEMS_PER_PAGE = 24;
+const ITEMS_PER_PAGE = 12;
 
 export function BestBatchContent() {
-  const [batches, setBatches] = useState<Batch[]>([]);
+  const [allBatches, setAllBatches] = useState<Batch[]>([]);
   const [displayedBatches, setDisplayedBatches] = useState<Batch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,16 +32,15 @@ export function BestBatchContent() {
   const observer = useRef<IntersectionObserver>();
 
   const lastBatchElementRef = useCallback((node: HTMLDivElement) => {
-    if (isLoading || isFetchingMore) return;
+    if (isFetchingMore) return;
     if (observer.current) observer.current.disconnect();
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore) {
         setPage(prevPage => prevPage + 1);
       }
-    });
+    }, { threshold: 0.5 });
     if (node) observer.current.observe(node);
-  }, [isLoading, isFetchingMore, hasMore]);
-
+  }, [isFetchingMore, hasMore]);
 
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
@@ -52,8 +50,8 @@ export function BestBatchContent() {
       
       if (!batchesRes.ok) throw new Error('Nie udało się pobrać batchy.');
       
-      const allBatches = await batchesRes.json();
-      setBatches(allBatches);
+      const allBatchesData = await batchesRes.json();
+      setAllBatches(allBatchesData);
       
     } catch (err) {
       setError((err as Error).message);
@@ -66,57 +64,40 @@ export function BestBatchContent() {
     fetchInitialData();
   }, [fetchInitialData]);
 
-  const applyFiltersAndSorting = useCallback(() => {
-    const filtered = batches
-      .filter((batch) => {
-          return batch.name.toLowerCase().includes(searchTerm.toLowerCase()) || batch.batch.toLowerCase().includes(searchTerm.toLowerCase());
-      });
+  const sortedBatches = useMemo(() => {
+    const filtered = allBatches.filter((batch) => {
+      return batch.name.toLowerCase().includes(searchTerm.toLowerCase()) || batch.batch.toLowerCase().includes(searchTerm.toLowerCase());
+    });
 
-    const sorted = [...filtered].sort((a, b) => {
-        switch (sortBy) {
-          case "price-low": return (a.priceCNY || 0) - (b.priceCNY || 0);
-          case "price-high": return (b.priceCNY || 0) - (a.priceCNY || 0);
-          case "hearts": return (b.favorites || 0) - (a.favorites || 0);
-          case "views": return (b.views || 0) - (a.views || 0);
-          default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        }
-      });
-      
-      setPage(1);
-      setDisplayedBatches(sorted.slice(0, ITEMS_PER_PAGE));
-      setHasMore(sorted.length > ITEMS_PER_PAGE);
-
-  }, [batches, searchTerm, sortBy]);
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "price-low": return (a.priceCNY || 0) - (b.priceCNY || 0);
+        case "price-high": return (b.priceCNY || 0) - (a.priceCNY || 0);
+        case "hearts": return (b.favorites || 0) - (a.favorites || 0);
+        case "views": return (b.views || 0) - (a.views || 0);
+        default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+  }, [allBatches, searchTerm, sortBy]);
 
   useEffect(() => {
-    applyFiltersAndSorting();
-  }, [applyFiltersAndSorting]);
+    setPage(1);
+    setDisplayedBatches(sortedBatches.slice(0, ITEMS_PER_PAGE));
+    setHasMore(sortedBatches.length > ITEMS_PER_PAGE);
+  }, [sortedBatches]);
 
   useEffect(() => {
     if (page > 1 && hasMore && !isFetchingMore) {
       setIsFetchingMore(true);
-      const filtered = batches
-        .filter((batch) => {
-            return batch.name.toLowerCase().includes(searchTerm.toLowerCase()) || batch.batch.toLowerCase().includes(searchTerm.toLowerCase());
-        });
-      const sorted = [...filtered].sort((a, b) => {
-        switch (sortBy) {
-          case "price-low": return (a.priceCNY || 0) - (b.priceCNY || 0);
-          case "price-high": return (b.priceCNY || 0) - (a.priceCNY || 0);
-          case "hearts": return (b.favorites || 0) - (a.favorites || 0);
-          case "views": return (b.views || 0) - (a.views || 0);
-          default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        }
-      });
-      const nextPageBatches = sorted.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+      const nextPageBatches = sortedBatches.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
       
-      setTimeout(() => { // Symulacja opóźnienia sieciowego dla lepszego UX
+      setTimeout(() => {
         setDisplayedBatches(prev => [...prev, ...nextPageBatches]);
-        setHasMore(sorted.length > page * ITEMS_PER_PAGE);
+        setHasMore(sortedBatches.length > page * ITEMS_PER_PAGE);
         setIsFetchingMore(false);
       }, 500);
     }
-  }, [page, batches, hasMore, isFetchingMore, searchTerm, sortBy]);
+  }, [page, sortedBatches, hasMore, isFetchingMore]);
 
   if (isLoading || isLoadingPreferences) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="w-12 h-12 animate-spin text-emerald-500" /></div>;
@@ -157,42 +138,33 @@ export function BestBatchContent() {
       </div>
       
       <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-        {displayedBatches.map((batch, index) => {
-          if (displayedBatches.length === index + 1) {
-            return (
-              <motion.div ref={lastBatchElementRef} key={batch._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-                <BatchCard
-                  batch={batch}
-                  viewMode={viewMode}
-                  isFavorited={wishlist.batches.some((item: any) => item._id === batch._id)}
-                  onToggleFavorite={() => toggleFavorite(batch, 'batch')}
-                />
-              </motion.div>
-            )
-          } else {
-            return (
-              <motion.div key={batch._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-                <BatchCard
-                  batch={batch}
-                  viewMode={viewMode}
-                  isFavorited={wishlist.batches.some((item: any) => item._id === batch._id)}
-                  onToggleFavorite={() => toggleFavorite(batch, 'batch')}
-                />
-              </motion.div>
-            )
-          }
-        })}
+        {displayedBatches.map((batch, index) => (
+          <motion.div 
+            key={batch._id} 
+            ref={displayedBatches.length === index + 1 ? lastBatchElementRef : null}
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: index * 0.05 }}
+          >
+            <BatchCard
+              batch={batch}
+              viewMode={viewMode}
+              isFavorited={wishlist.batches.some((item: any) => item._id === batch._id)}
+              onToggleFavorite={() => toggleFavorite(batch, 'batch')}
+            />
+          </motion.div>
+        ))}
       </div>
 
       {isFetchingMore && (
         <div className="flex justify-center items-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
         </div>
       )}
       
       {!hasMore && displayedBatches.length > 0 && (
         <div className="text-center text-white/70 py-8">
-            <p>To już wszystko!</p>
+          <p>To już wszystko!</p>
         </div>
       )}
     </div>
