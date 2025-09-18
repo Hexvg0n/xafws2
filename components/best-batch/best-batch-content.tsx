@@ -30,17 +30,26 @@ export function BestBatchContent() {
   const [hasMore, setHasMore] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const observer = useRef<IntersectionObserver>();
+  const isFetchingMoreRef = useRef(isFetchingMore);
+
+  useEffect(() => {
+    isFetchingMoreRef.current = isFetchingMore;
+  }, [isFetchingMore]);
+
 
   const lastBatchElementRef = useCallback((node: HTMLDivElement) => {
-    if (isFetchingMore) return;
+    if (isLoading) return;
     if (observer.current) observer.current.disconnect();
+
     observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
+      if (entries[0].isIntersecting && hasMore && !isFetchingMoreRef.current) {
         setPage(prevPage => prevPage + 1);
       }
     }, { threshold: 0.5 });
+    
     if (node) observer.current.observe(node);
-  }, [isFetchingMore, hasMore]);
+  }, [isLoading, hasMore]);
+
 
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
@@ -87,17 +96,17 @@ export function BestBatchContent() {
   }, [sortedBatches]);
 
   useEffect(() => {
-    if (page > 1 && hasMore && !isFetchingMore) {
-      setIsFetchingMore(true);
-      const nextPageBatches = sortedBatches.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+    if (page === 1) return;
+
+    setIsFetchingMore(true);
+    const nextPageBatches = sortedBatches.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
       
-      setTimeout(() => {
-        setDisplayedBatches(prev => [...prev, ...nextPageBatches]);
-        setHasMore(sortedBatches.length > page * ITEMS_PER_PAGE);
-        setIsFetchingMore(false);
-      }, 500);
-    }
-  }, [page, sortedBatches, hasMore, isFetchingMore]);
+    setTimeout(() => {
+      setDisplayedBatches(prev => [...prev, ...nextPageBatches]);
+      setHasMore(sortedBatches.length > page * ITEMS_PER_PAGE);
+      setIsFetchingMore(false);
+    }, 500);
+  }, [page, sortedBatches]);
 
   if (isLoading || isLoadingPreferences) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="w-12 h-12 animate-spin text-emerald-500" /></div>;
@@ -140,7 +149,7 @@ export function BestBatchContent() {
       <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
         {displayedBatches.map((batch, index) => (
           <motion.div 
-            key={batch._id} 
+            key={batch._id}
             ref={displayedBatches.length === index + 1 ? lastBatchElementRef : null}
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 

@@ -32,22 +32,31 @@ export function W2CContent() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("createdAt");
   const [selectedCategory, setSelectedCategory] = useState("all");
-
+  
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const observer = useRef<IntersectionObserver>();
+  const isFetchingMoreRef = useRef(isFetchingMore);
+
+  useEffect(() => {
+    isFetchingMoreRef.current = isFetchingMore;
+  }, [isFetchingMore]);
+
 
   const lastProductElementRef = useCallback((node: HTMLDivElement) => {
-    if (isFetchingMore) return;
+    if (isLoading) return;
     if (observer.current) observer.current.disconnect();
+    
     observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
+      if (entries[0].isIntersecting && hasMore && !isFetchingMoreRef.current) {
         setPage(prevPage => prevPage + 1);
       }
     }, { threshold: 0.5 });
+
     if (node) observer.current.observe(node);
-  }, [isFetchingMore, hasMore]);
+  }, [isLoading, hasMore]);
+
 
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
@@ -61,7 +70,8 @@ export function W2CContent() {
       if (!productsRes.ok) throw new Error('Nie udało się pobrać produktów.');
       if (!categoriesRes.ok) throw new Error('Nie udało się pobrać kategorii.');
       
-      setAllProducts(await productsRes.json());
+      const allProductsData = await productsRes.json();
+      setAllProducts(allProductsData);
       setCategories(await categoriesRes.json());
       
     } catch (err) {
@@ -77,20 +87,20 @@ export function W2CContent() {
 
   const sortedProducts = useMemo(() => {
     const filtered = allProducts.filter((product) => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+        return matchesSearch && matchesCategory;
     });
 
     return [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case "price-low": return (a.priceCNY || 0) - (b.priceCNY || 0);
-        case "price-high": return (b.priceCNY || 0) - (a.priceCNY || 0);
-        case "hearts": return (b.favorites || 0) - (a.favorites || 0);
-        case "views": return (b.views || 0) - (a.views || 0);
-        default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-    });
+        switch (sortBy) {
+          case "price-low": return (a.priceCNY || 0) - (b.priceCNY || 0);
+          case "price-high": return (b.priceCNY || 0) - (a.priceCNY || 0);
+          case "hearts": return (b.favorites || 0) - (a.favorites || 0);
+          case "views": return (b.views || 0) - (a.views || 0);
+          default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+      });
   }, [allProducts, searchTerm, selectedCategory, sortBy]);
 
   useEffect(() => {
@@ -100,17 +110,17 @@ export function W2CContent() {
   }, [sortedProducts]);
 
   useEffect(() => {
-    if (page > 1 && hasMore && !isFetchingMore) {
-      setIsFetchingMore(true);
-      const nextPageProducts = sortedProducts.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-      
-      setTimeout(() => {
-        setDisplayedProducts(prev => [...prev, ...nextPageProducts]);
-        setHasMore(sortedProducts.length > page * ITEMS_PER_PAGE);
-        setIsFetchingMore(false);
-      }, 500);
-    }
-  }, [page, sortedProducts, hasMore, isFetchingMore]);
+    if (page === 1) return;
+    
+    setIsFetchingMore(true);
+    const nextPageProducts = sortedProducts.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+    
+    setTimeout(() => {
+      setDisplayedProducts(prev => [...prev, ...nextPageProducts]);
+      setHasMore(sortedProducts.length > page * ITEMS_PER_PAGE);
+      setIsFetchingMore(false);
+    }, 500);
+  }, [page, sortedProducts]);
 
   if (isLoading || isLoadingPreferences) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="w-12 h-12 animate-spin text-emerald-500" /></div>;
@@ -136,26 +146,26 @@ export function W2CContent() {
           </div>
           <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-auto bg-white/5 border-white/10">
-                <SelectValue placeholder="Filtruj po kategorii..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Wszystkie Kategorie</SelectItem>
-                {categories.map(cat => (
-                  <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
+                <SelectTrigger className="w-full sm:w-auto bg-white/5 border-white/10">
+                    <SelectValue placeholder="Filtruj po kategorii..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Wszystkie Kategorie</SelectItem>
+                    {categories.map(cat => (
+                        <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
+                    ))}
+                </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-full sm:w-auto bg-white/5 border-white/10">
-                <SelectValue placeholder="Sortuj..." />
+                  <SelectValue placeholder="Sortuj..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="createdAt">Sortuj: Najnowsze</SelectItem>
-                <SelectItem value="price-low">Sortuj: Cena rosnąco</SelectItem>
-                <SelectItem value="price-high">Sortuj: Cena malejąco</SelectItem>
-                <SelectItem value="hearts">Sortuj: Polubienia</SelectItem>
-                <SelectItem value="views">Sortuj: Wyświetlenia</SelectItem>
+                  <SelectItem value="createdAt">Sortuj: Najnowsze</SelectItem>
+                  <SelectItem value="price-low">Sortuj: Cena rosnąco</SelectItem>
+                  <SelectItem value="price-high">Sortuj: Cena malejąco</SelectItem>
+                  <SelectItem value="hearts">Sortuj: Polubienia</SelectItem>
+                  <SelectItem value="views">Sortuj: Wyświetlenia</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex items-center space-x-2">
@@ -187,13 +197,13 @@ export function W2CContent() {
 
       {isFetchingMore && (
         <div className="flex justify-center items-center py-8">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
         </div>
       )}
 
       {!hasMore && displayedProducts.length > 0 && (
         <div className="text-center text-white/70 py-8">
-          <p>To już wszystko!</p>
+            <p>To już wszystko!</p>
         </div>
       )}
     </div>
