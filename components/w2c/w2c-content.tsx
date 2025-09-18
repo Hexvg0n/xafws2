@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Search, Grid, List, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -18,19 +18,38 @@ type Category = {
     name: string;
 };
 
+const ITEMS_PER_PAGE = 24;
+
 export function W2CContent() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [displayedProducts, setDisplayedProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { wishlist, toggleFavorite } = useWishlist();
   const { isLoading: isLoadingPreferences } = usePreferences();
-  const { data: session } = useSession();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("createdAt");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const observer = useRef<IntersectionObserver>();
+
+  const lastProductElementRef = useCallback((node: HTMLDivElement) => {
+    if (isLoading || isFetchingMore) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage(prevPage => prevPage + 1);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [isLoading, isFetchingMore, hasMore]);
+
 
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
@@ -44,7 +63,8 @@ export function W2CContent() {
       if (!productsRes.ok) throw new Error('Nie udało się pobrać produktów.');
       if (!categoriesRes.ok) throw new Error('Nie udało się pobrać kategorii.');
       
-      setProducts(await productsRes.json());
+      const allProducts = await productsRes.json();
+      setProducts(allProducts);
       setCategories(await categoriesRes.json());
       
     } catch (err) {
@@ -57,23 +77,63 @@ export function W2CContent() {
   useEffect(() => {
     fetchInitialData();
   }, [fetchInitialData]);
-  
-  const filteredProducts = products
-    .filter((product) => {
-        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-        return matchesSearch && matchesCategory;
-    });
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-      switch (sortBy) {
-        case "price-low": return (a.priceCNY || 0) - (b.priceCNY || 0);
-        case "price-high": return (b.priceCNY || 0) - (a.priceCNY || 0);
-        case "hearts": return (b.favorites || 0) - (a.favorites || 0);
-        case "views": return (b.views || 0) - (a.views || 0);
-        default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-    });
+  const applyFiltersAndSorting = useCallback(() => {
+    const filtered = products
+      .filter((product) => {
+          const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+          const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+          return matchesSearch && matchesCategory;
+      });
+
+    const sorted = [...filtered].sort((a, b) => {
+        switch (sortBy) {
+          case "price-low": return (a.priceCNY || 0) - (b.priceCNY || 0);
+          case "price-high": return (b.priceCNY || 0) - (a.priceCNY || 0);
+          case "hearts": return (b.favorites || 0) - (a.favorites || 0);
+          case "views": return (b.views || 0) - (a.views || 0);
+          default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+      });
+      
+      setPage(1);
+      setDisplayedProducts(sorted.slice(0, ITEMS_PER_PAGE));
+      setHasMore(sorted.length > ITEMS_PER_PAGE);
+
+  }, [products, searchTerm, selectedCategory, sortBy]);
+
+  useEffect(() => {
+    applyFiltersAndSorting();
+  }, [applyFiltersAndSorting]);
+
+  useEffect(() => {
+    if (page > 1 && hasMore && !isFetchingMore) {
+      setIsFetchingMore(true);
+      const filtered = products
+        .filter((product) => {
+            const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+            return matchesSearch && matchesCategory;
+        });
+      const sorted = [...filtered].sort((a, b) => {
+        switch (sortBy) {
+          case "price-low": return (a.priceCNY || 0) - (b.priceCNY || 0);
+          case "price-high": return (b.priceCNY || 0) - (a.priceCNY || 0);
+          case "hearts": return (b.favorites || 0) - (a.favorites || 0);
+          case "views": return (b.views || 0) - (a.views || 0);
+          default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+      });
+      const nextPageProducts = sorted.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+      
+      setTimeout(() => { // Symulacja opóźnienia sieciowego dla lepszego UX
+        setDisplayedProducts(prev => [...prev, ...nextPageProducts]);
+        setHasMore(sorted.length > page * ITEMS_PER_PAGE);
+        setIsFetchingMore(false);
+      }, 500);
+    }
+  }, [page, products, hasMore, isFetchingMore, searchTerm, selectedCategory, sortBy]);
+
 
   if (isLoading || isLoadingPreferences) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="w-12 h-12 animate-spin text-emerald-500" /></div>;
@@ -97,7 +157,6 @@ export function W2CContent() {
               className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white"
             />
           </div>
-          {/* ##### ZMIANY ZNAJDUJĄ SIĘ PONIŻEJ ##### */}
           <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger className="w-full sm:w-auto bg-white/5 border-white/10">
@@ -131,17 +190,44 @@ export function W2CContent() {
       </div>
       
       <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-        {sortedProducts.map((product, index) => (
-          <motion.div key={product._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-            <ProductCard
-              product={product}
-              viewMode={viewMode}
-              isFavorited={wishlist.products.some((item: any) => item._id === product._id)}
-              onToggleFavorite={() => toggleFavorite(product, 'product')}
-            />
-          </motion.div>
-        ))}
+        {displayedProducts.map((product, index) => {
+          if (displayedProducts.length === index + 1) {
+            return (
+              <motion.div ref={lastProductElementRef} key={product._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+                <ProductCard
+                  product={product}
+                  viewMode={viewMode}
+                  isFavorited={wishlist.products.some((item: any) => item._id === product._id)}
+                  onToggleFavorite={() => toggleFavorite(product, 'product')}
+                />
+              </motion.div>
+            )
+          } else {
+            return (
+              <motion.div key={product._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+                <ProductCard
+                  product={product}
+                  viewMode={viewMode}
+                  isFavorited={wishlist.products.some((item: any) => item._id === product._id)}
+                  onToggleFavorite={() => toggleFavorite(product, 'product')}
+                />
+              </motion.div>
+            )
+          }
+        })}
       </div>
+
+      {isFetchingMore && (
+        <div className="flex justify-center items-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+        </div>
+      )}
+
+      {!hasMore && displayedProducts.length > 0 && (
+        <div className="text-center text-white/70 py-8">
+            <p>To już wszystko!</p>
+        </div>
+      )}
     </div>
   )
 }
