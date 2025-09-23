@@ -4,6 +4,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { PreferencesModal } from '../profile/PreferencesModal'; // Zakładamy, że ten plik istnieje
 
 interface Rates {
   [key: string]: number;
@@ -16,9 +17,9 @@ interface PreferencesContextType {
   isLoading: boolean;
   convertPrice: (priceCNY: number) => string;
   generateAgentLink: (sourceUrl: string) => Promise<string>;
-  // Nowe funkcje do aktualizacji stanu
   updateAgent: (agent: string) => void;
   updateCurrency: (currency: string) => void;
+  openSettingsModal: () => void; // Funkcja do otwierania modala z zewnątrz
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
@@ -36,24 +37,32 @@ export const PreferencesProvider = ({ children }: { children: ReactNode }) => {
   const [preferredCurrency, setPreferredCurrency] = useState('PLN');
   const [currencyRates, setCurrencyRates] = useState<Rates>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Jeden stan do zarządzania modalem
   const { data: session, status } = useSession();
 
   const loadInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [ratesRes, profileRes] = await Promise.all([
-        fetch('/api/currency/rates'),
-        status === 'authenticated' ? fetch('/api/profile') : Promise.resolve(null)
-      ]);
-
+      const ratesRes = await fetch('/api/currency/rates');
       if (ratesRes.ok) {
         setCurrencyRates(await ratesRes.json());
       }
 
-      if (profileRes && profileRes.ok) {
-        const profileData = await profileRes.json();
-        setPreferredAgent(profileData.preferredAgent || 'pandabuy');
-        setPreferredCurrency(profileData.preferredCurrency || 'PLN');
+      if (status === 'authenticated') {
+        const profileRes = await fetch('/api/profile');
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          const agent = profileData.preferredAgent;
+          const currency = profileData.preferredCurrency;
+          
+          if (agent) setPreferredAgent(agent);
+          if (currency) setPreferredCurrency(currency);
+
+          // Pokaż modal, jeśli użytkownik nie ma zapisanych preferencji
+          if (!agent) {
+            setIsModalOpen(true);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to load preferences data", error);
@@ -95,6 +104,8 @@ export const PreferencesProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const openSettingsModal = () => setIsModalOpen(true);
+
   return (
     <PreferencesContext.Provider value={{ 
       preferredAgent, 
@@ -104,9 +115,11 @@ export const PreferencesProvider = ({ children }: { children: ReactNode }) => {
       convertPrice, 
       generateAgentLink,
       updateAgent: setPreferredAgent,       
-      updateCurrency: setPreferredCurrency, 
+      updateCurrency: setPreferredCurrency,
+      openSettingsModal
     }}>
       {children}
+      {isModalOpen && <PreferencesModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />}
     </PreferencesContext.Provider>
   );
 };

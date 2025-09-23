@@ -1,3 +1,5 @@
+// components/w2c/product-card.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -92,35 +94,34 @@ export function ProductCard({ product, viewMode, isFavorited, onToggleFavorite }
       </AlertDialog>
 
       {viewMode === "list" ? (
-        <motion.div whileHover={{ y: -5 }} className="glass-morphism rounded-2xl p-6 hover:bg-white/10">
-          <div className="flex items-center space-x-6">
-              <Link href={`/w2c/${product._id}`} className="block flex-shrink-0">
-                  <div className="w-24 h-24 rounded-lg overflow-hidden bg-white/5"><ProductImage /></div>
-              </Link>
-              <div className="flex-1 min-w-0">
-                  <Link href={`/w2c/${product._id}`}><h3 className="text-xl font-semibold text-white mb-2 hover:text-emerald-400 truncate">{product.name}</h3></Link>
-                  <p className="text-sm text-white/60 mb-3">by {sellerName}</p>
-                   <div className="flex items-center space-x-4 text-white/70 text-sm">
-                      <div className="flex items-center space-x-1.5"><Heart className="w-4 h-4 text-red-400/70" /> <span>{product.favorites || 0}</span></div>
-                      <div className="flex items-center space-x-1.5"><Eye className="w-4 h-4" /> <span>{product.views || 0}</span></div>
-                  </div>
-              </div>
-               <div className="text-right flex flex-col items-end justify-between">
-                  <div className="text-2xl font-bold text-emerald-400 mb-4">{convertPrice(product.priceCNY || 0)}</div>
-                  <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={handleFavoriteClick} disabled={isLoadingFavorite}>
-                          {isLoadingFavorite ? <Loader2 className="w-4 h-4 animate-spin"/> : <Heart className={`w-4 h-4 transition-colors ${isFavorited ? 'text-red-500 fill-current' : 'text-white/60'}`} />}
-                      </Button>
-                      <Button onClick={handleBuyClick} disabled={isLoadingLink} size="sm" className="bg-gradient-to-r from-emerald-600 to-emerald-400">
-                          {isLoadingLink ? <Loader2 className="w-4 h-4 animate-spin"/> : <ShoppingCart className="w-4 h-4 mr-2" />}
-                          Kup teraz
-                      </Button>
-                  </div>
-              </div>
-          </div>
+        <motion.div whileHover={{ y: -5 }} className="glass-morphism rounded-2xl p-4 hover:bg-white/10 transition-colors duration-300">
+            <div className="flex items-start space-x-4">
+                <Link href={`/w2c/${product._id}`} className="block flex-shrink-0">
+                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-white/5"><ProductImage /></div>
+                </Link>
+                <div className="flex-1 min-w-0">
+                    <Link href={`/w2c/${product._id}`}><h3 className="font-semibold text-white hover:text-emerald-400 break-words">{product.name}</h3></Link>
+                    <p className="text-sm text-white/60 mt-1">by {sellerName}</p>
+                    <div className="flex items-center space-x-4 text-white/70 text-sm mt-2">
+                        <div className="flex items-center space-x-1.5"><Heart className="w-4 h-4 text-red-400/70" /> <span>{product.favorites || 0}</span></div>
+                        <div className="flex items-center space-x-1.5"><Eye className="w-4 h-4" /> <span>{product.views || 0}</span></div>
+                    </div>
+                    <div className="flex items-center justify-between mt-4">
+                        <div className="text-lg font-bold text-emerald-400">{convertPrice(product.priceCNY || 0)}</div>
+                        <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="w-8 h-8" onClick={handleFavoriteClick} disabled={isLoadingFavorite}>
+                                {isLoadingFavorite ? <Loader2 className="w-4 h-4 animate-spin"/> : <Heart className={`w-4 h-4 transition-colors ${isFavorited ? 'text-red-500 fill-current' : 'text-white/60'}`} />}
+                            </Button>
+                            <Button onClick={handleBuyClick} disabled={isLoadingLink} size="sm" className="bg-gradient-to-r from-emerald-600 to-emerald-400">
+                                {isLoadingLink ? <Loader2 className="w-4 h-4 animate-spin"/> : <ShoppingCart className="w-4 h-4" />}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </motion.div>
       ) : (
-        <motion.div whileHover={{ y: -8 }} className="glass-morphism rounded-2xl overflow-hidden h-full flex flex-col">
+        <motion.div whileHover={{ y: -8 }} className="glass-morphism rounded-2xl overflow-hidden h-full flex flex-col group">
           <Link href={`/w2c/${product._id}`} className="cursor-pointer">
             <div className="relative aspect-square"><ProductImage /></div>
           </Link>
@@ -140,8 +141,7 @@ export function ProductCard({ product, viewMode, isFavorited, onToggleFavorite }
                 {isLoadingFavorite ? <Loader2 className="w-4 h-4 animate-spin"/> : <Heart className={`w-4 h-4 ${isFavorited ? 'text-red-500 fill-current' : 'text-white/60'}`} />}
               </Button>
               <Button onClick={handleBuyClick} disabled={isLoadingLink} size="sm" className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-400">
-                {isLoadingLink ? <Loader2 className="w-4 h-4 animate-spin"/> : <ShoppingCart className="w-4 h-4 mr-2" />}
-                Kup teraz
+                {isLoadingLink ? <Loader2 className="w-4 h-4 animate-spin"/> : <><ShoppingCart className="w-4 h-4 mr-2" />Kup teraz</>}
               </Button>
             </div>
           </div>

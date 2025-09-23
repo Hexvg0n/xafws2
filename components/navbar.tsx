@@ -7,7 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession, signOut, signIn } from "next-auth/react";
-import { Menu, X, User, LogOut, Shield, Loader2, Heart } from "lucide-react";
+import { Menu, X, User, LogOut, Shield, Loader2, Heart, Settings } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
 import { useWishlist } from "./context/WishlistProvider";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { usePreferences } from "./context/PreferencesProvider";
 
 const navItems = [
   { name: "W2C", href: "/w2c" },
@@ -41,6 +42,7 @@ export function Navbar() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
   const { wishlist } = useWishlist();
+  const { openSettingsModal } = usePreferences();
 
   const totalFavorites = (wishlist.products?.length || 0) + (wishlist.batches?.length || 0);
   const allFavorites = [...(wishlist.products || []), ...(wishlist.batches || [])];
@@ -115,6 +117,10 @@ export function Navbar() {
                     )}
                   </HoverCardContent>
                 </HoverCard>
+                
+                <Button variant="ghost" size="icon" className="text-white/70 hover:text-white" onClick={openSettingsModal}>
+                    <Settings />
+                </Button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -167,7 +173,6 @@ export function Navbar() {
               <div className="pt-4 border-t border-white/10 space-y-2">
                 {session ? (
                     <>
-                      {/* ZMIANA: Dodane linki do panelu i profilu */}
                       {(userRole === 'admin' || userRole === 'root' || userRole === 'adder') && (
                           <Button asChild variant="ghost" className="w-full justify-start text-white/70 hover:text-white py-2 h-auto" onClick={() => setIsOpen(false)}>
                               <Link href="/dashboard"><Shield className="w-5 h-5 mr-3" />Panel</Link>
