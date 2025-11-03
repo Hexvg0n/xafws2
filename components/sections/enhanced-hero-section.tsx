@@ -65,7 +65,7 @@ export function EnhancedHeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
       <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="green" />
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0d0d0d] via-[#1a1a1a] to-[#0d0d0d]" />
+      <div className="absolute inset-0 bg-stone-950" />
       <Meteors number={20} />
       <div className="absolute inset-0">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" />
