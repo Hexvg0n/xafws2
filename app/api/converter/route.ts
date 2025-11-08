@@ -1,18 +1,14 @@
 // app/api/converter/route.ts
 import { NextResponse } from 'next/server';
-
 // ====================================================================
 // KROK 1: Definicje typów dla TypeScript
 // ====================================================================
-
 type PlatformName = 'taobao' | 'tmall' | '1688' | 'weidian';
-
 interface Platform {
   regex: RegExp;
   urlPattern: string;
   itemIDPattern: RegExp[];
 }
-
 interface Middleman {
   name: string;
   template: string;
@@ -22,11 +18,9 @@ interface Middleman {
   aliases?: string[];
   sourceCodeToPlatform?: { [key: string]: PlatformName };
 }
-
 // ====================================================================
 // KROK 2: Otypowanie stałych
 // ====================================================================
-
 const platforms: Record<PlatformName, Platform> = {
   taobao: {
     regex: /(?:https?:\/\/)?(?:\w+\.)?taobao\.com/,
@@ -49,9 +43,20 @@ const platforms: Record<PlatformName, Platform> = {
     itemIDPattern: [/itemID=(\d+)/, /itemI[dD]=(\d+)/]
   },
 };
-
 const middlemen: Record<string, Middleman> = {
-     acbuy: {
+  "24gobuy": {
+    name: "24GoBuy",
+    template: "https://www.24gobuy.com/productDetail?url={{encodedUrl}}",
+    platformMapping: {
+      taobao: "item.taobao.com",
+      "1688": "detail.1688.com",
+      weidian: "weidian.com",
+      tmall: "detail.tmall.com"
+    },
+    itemIDPattern: [/id=(\d+)/, /\/offer\/(\d+)\.html/, /itemID=(\d+)/, /itemI[dD]=(\d+)/],
+    requiresDecoding: true
+  },
+    acbuy: {
     name: "ACBuy",
     template: "https://acbuy.com/product?id={{itemID}}&u=dripez&source={{platformIdentifier}}",
     platformMapping: {
@@ -168,9 +173,9 @@ const middlemen: Record<string, Middleman> = {
         "tmall": "tmall"
     }
   },
-  joyabuy: {
+  joyagoo: {
     name: "Joyabuy",
-    template: "https://joyabuy.com/product/?shop_type={{platformDomain}}&id={{itemID}}",
+    template: "https://joyagoo.com/product/?shop_type={{platformDomain}}&id={{itemID}}",
     platformMapping: {
       taobao: "taobao",
       "1688": "ali_1688",
@@ -204,26 +209,23 @@ const middlemen: Record<string, Middleman> = {
     itemIDPattern: [/product\/(\d+)\/(\d+)/, /id=(\d+)/, /\/offer\/(\d+)\.html/, /itemID=(\d+)/, /itemI[dD]=(\d+)/],
     requiresDecoding: false
   },
+  
 };
-
 const platformNameToCode: Record<PlatformName, string> = {
   '1688': '0',
   'taobao': '1',
   'weidian': '2',
   'tmall': '3'
 };
-
 const codeToPlatformName: Record<string, PlatformName> = {
   '0': '1688',
   '1': 'taobao',
   '2': 'weidian',
   '3': 'tmall'
 };
-
 // ====================================================================
 // KROK 3: Otypowanie funkcji pomocniczych
 // ====================================================================
-
 function extractItemID(url: string, patterns: RegExp[]): { itemID: string; platformCode?: string } | null {
   const decodedUrl = decodeURIComponent(url);
   for (const pattern of patterns) {
@@ -237,7 +239,6 @@ function extractItemID(url: string, patterns: RegExp[]): { itemID: string; platf
   }
   return null;
 }
-
 function decodeUrlIfNeeded(url: string, middleman: Middleman): string {
   if (middleman.requiresDecoding) {
     try {
@@ -250,7 +251,6 @@ function decodeUrlIfNeeded(url: string, middleman: Middleman): string {
   }
   return url;
 }
-
 function identifyPlatform(url: string): PlatformName | null {
   for (const name in platforms) {
     const platformName = name as PlatformName;
@@ -258,18 +258,15 @@ function identifyPlatform(url: string): PlatformName | null {
   }
   return null;
 }
-
 function convertMiddlemanToOriginal(url: string): string | null {
     for (const [middlemanName, middleman] of Object.entries(middlemen)) {
         const aliases = [middlemanName, ...(middleman.aliases || [])];
         if (aliases.some(alias => url.toLowerCase().includes(alias.toLowerCase()))) {
             const processedUrl = decodeUrlIfNeeded(url, middleman);
             const extracted = extractItemID(processedUrl, middleman.itemIDPattern);
-
             if (extracted?.itemID) {
                 let platformName: PlatformName | null = null;
                 const itemID = extracted.itemID;
-
                 if (middlemanName === 'acbuy' && middleman.sourceCodeToPlatform) {
                     const sourceMatch = processedUrl.match(/[?&]source=([^&]+)/);
                     if (sourceMatch && sourceMatch[1]) {
@@ -277,7 +274,7 @@ function convertMiddlemanToOriginal(url: string): string | null {
                         platformName = middleman.sourceCodeToPlatform[sourceCode] || null;
                     }
                 } else if (middlemanName === 'cnfans' && middleman.sourceCodeToPlatform) {
-                    const shopTypeMatch = processedUrl.match(/[?&]shop_type=([^&]+)/);
+                     const shopTypeMatch = processedUrl.match(/[?&]shop_type=([^&]+)/);
                      if (shopTypeMatch && shopTypeMatch[1]) {
                         const shopType = shopTypeMatch[1];
                         platformName = middleman.sourceCodeToPlatform[shopType] || null;
@@ -286,7 +283,6 @@ function convertMiddlemanToOriginal(url: string): string | null {
                 else if (middleman.requiresDecoding) {
                     platformName = identifyPlatform(processedUrl);
                 }
-
                 if (platformName && itemID && platforms[platformName]) {
                     return platforms[platformName].urlPattern.replace("{{itemID}}", itemID);
                 }
@@ -295,26 +291,20 @@ function convertMiddlemanToOriginal(url: string): string | null {
     }
     return null;
 }
-
 function convertUrlToMiddleman(originalUrlInput: string, middlemanKey: string): string | null {
     const middleman = middlemen[middlemanKey];
     if (!middleman) return null;
-
     const platformName = identifyPlatform(originalUrlInput);
     if (!platformName) return null;
-
     const extraction = extractItemID(originalUrlInput, platforms[platformName].itemIDPattern);
     if (!extraction?.itemID) return null;
-
     const itemID = extraction.itemID;
     const platformMappedValue = middleman.platformMapping?.[platformName];
-
     if (!platformMappedValue && (middleman.template.includes('{{platform') || middleman.template.includes('{{cssPlatform'))) {
         return null; // Ten agent nie obsługuje tej platformy
     }
-    
+   
     let resultUrl = middleman.template.replace(/{{itemID}}/g, itemID);
-
     if (resultUrl.includes('{{encodedUrl}}')) {
         resultUrl = resultUrl.replace(/{{encodedUrl}}/g, encodeURIComponent(originalUrlInput));
     }
@@ -329,14 +319,11 @@ function convertUrlToMiddleman(originalUrlInput: string, middlemanKey: string): 
             resultUrl = resultUrl.replace('{{platformCode}}', platformCode);
         }
     }
-
     return resultUrl;
 }
-
 // ====================================================================
 // KROK 4: Otypowanie endpointów API
 // ====================================================================
-
 export async function GET() {
   const headers = { 'Content-Type': 'application/json' };
   try {
@@ -349,19 +336,15 @@ export async function GET() {
     return NextResponse.json({ error: 'Wewnętrzny błąd serwera' }, { status: 500, headers });
   }
 }
-
 export async function POST(request: Request) {
   const headers = { 'Content-Type': 'application/json' };
   try {
     const body = await request.json();
     const url = body.url;
-
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ error: 'Brak wymaganego parametru URL' }, { status: 400, headers });
     }
-
     let originalProductUrl = convertMiddlemanToOriginal(url) || (identifyPlatform(url) ? url : null);
-
     if (originalProductUrl) {
          const platform = identifyPlatform(originalProductUrl);
          if (platform) {
@@ -371,10 +354,9 @@ export async function POST(request: Request) {
             }
          }
     }
-    
+   
     const convertedLinks: { key: string; name: string; url: string }[] = [];
     const baseLinkForMiddlemen = originalProductUrl || url;
-
     for (const [middlemanKey, middlemanValue] of Object.entries(middlemen)) {
       const convertedUrl = convertUrlToMiddleman(baseLinkForMiddlemen, middlemanKey);
       if (convertedUrl) {
@@ -385,19 +367,16 @@ export async function POST(request: Request) {
         });
       }
     }
-
     const responsePayload = {
       originalUrl: originalProductUrl || "Nie udało się zidentyfikować oryginalnego linku.",
       convertedLinks: convertedLinks
     };
-
     return NextResponse.json(responsePayload, { headers });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Wystąpił nieznany błąd.';
     return NextResponse.json({ error: 'Wewnętrzny błąd serwera', details: errorMessage }, { status: 500, headers });
   }
 }
-
 export async function OPTIONS() {
   return NextResponse.json(null, {
     headers: {
